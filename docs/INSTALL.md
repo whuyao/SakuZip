@@ -48,8 +48,8 @@ shasum -a 256 YCompress-macOS-arm64.zip
 shasum -a 256 -c SHA256SUMS
 ```
 
-版本 `0.1.3` 的预期值记录在同一 Release 附带的 `SHA256SUMS` 中；项目根目录和
-`dist/` 也各保存一份。DMG 与 ZIP 每次重新打包后的字节可能不同，应以同一批次生成的
+版本 `0.1.3` 的预期值记录在同一 Release 附带的 `SHA256SUMS` 中；项目的 `dist/`
+也保存一份。DMG 与 ZIP 每次重新打包后的字节可能不同，应以同一批次生成的
 `SHA256SUMS` 为准。
 
 如果结果不同，请重新从 GitHub Release 下载，不要继续安装来源不明的文件。

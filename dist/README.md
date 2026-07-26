@@ -16,4 +16,4 @@ App Bundle、ZIP 与 DMG 安装包均提交到仓库。公开版本也通过
 ./scripts/package-release.sh
 ```
 
-脚本会同时更新本目录，并把同一批发布文件放在项目根目录，方便本机直接查找。
+所有本地和 GitHub Release 交付物都以本目录中的文件为准，项目根目录不再保留副本。
