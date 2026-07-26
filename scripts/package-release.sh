@@ -82,6 +82,9 @@ rm -rf "$DIST_DIR/YCompress.app"
 /bin/cp "$ROOT_DMG" "$DIST_DIR/$DMG_NAME"
 /bin/cp "$PROJECT_DIR/SHA256SUMS" "$DIST_DIR/SHA256SUMS"
 
+# ditto 会保留源 Bundle 的目录时间；刷新顶层时间，避免 Finder 把新 App 显示成旧版本。
+/usr/bin/touch "$ROOT_APP" "$DIST_DIR/YCompress.app"
+
 echo "发布文件已生成："
 echo "$ROOT_APP"
 echo "$ROOT_ZIP"
