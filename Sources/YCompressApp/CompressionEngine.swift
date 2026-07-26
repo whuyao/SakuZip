@@ -1,5 +1,6 @@
 import AVFoundation
 import CoreGraphics
+import Darwin
 import Foundation
 import ImageIO
 import UniformTypeIdentifiers
@@ -25,8 +26,25 @@ enum CompressionError: LocalizedError {
     }
 }
 
+typealias CompressionProgressHandler = @MainActor @Sendable (Double, String) -> Void
+
 actor CompressionEngine {
-    func process(url: URL, options: CompressionOptions) async throws -> URL {
+    private var activeExportSession: AVAssetExportSession?
+    private var activeProcess: Process?
+
+    func cancelCurrent() {
+        activeExportSession?.cancelExport()
+        if activeProcess?.isRunning == true {
+            activeProcess?.terminate()
+        }
+    }
+
+    func process(
+        url: URL,
+        options: CompressionOptions,
+        progress: @escaping CompressionProgressHandler
+    ) async throws -> URL {
+        await progress(0.02, "正在准备")
         try FileManager.default.createDirectory(
             at: options.outputDirectory,
             withIntermediateDirectories: true
@@ -34,23 +52,31 @@ actor CompressionEngine {
         let action = FileClassifier.resolvedAction(for: url, requested: options.action)
         switch action {
         case .compressImage:
-            return try compressImage(url, options: options)
+            return try await compressImage(url, options: options, progress: progress)
         case .compressVideo:
-            return try await compressVideo(url, options: options)
+            return try await compressVideo(url, options: options, progress: progress)
         case .createArchive:
-            return try await createArchive(url, options: options)
+            return try await createArchive(url, options: options, progress: progress)
         case .extractArchive:
-            return try await extractArchive(url, options: options)
+            return try await extractArchive(url, options: options, progress: progress)
         case .smart:
             throw CompressionError.unsupported("无法解析智能工作流")
         }
     }
 
-    private func compressImage(_ sourceURL: URL, options: CompressionOptions) throws -> URL {
+    private func compressImage(
+        _ sourceURL: URL,
+        options: CompressionOptions,
+        progress: @escaping CompressionProgressHandler
+    ) async throws -> URL {
+        await progress(0.08, "正在读取图片")
+        try Task.checkCancellation()
         guard let source = CGImageSourceCreateWithURL(sourceURL as CFURL, nil) else {
             throw CompressionError.invalidImage
         }
 
+        await progress(0.30, "正在缩放图片")
+        try Task.checkCancellation()
         let image: CGImage?
         if let maxDimension = options.advanced.imageMaxDimension ?? options.maxImageDimension {
             let thumbnailOptions: [CFString: Any] = [
@@ -64,6 +90,8 @@ actor CompressionEngine {
         }
         guard let image else { throw CompressionError.invalidImage }
 
+        await progress(0.58, "正在准备输出")
+        try Task.checkCancellation()
         let preservesAlpha = image.alphaInfo == .premultipliedFirst
             || image.alphaInfo == .premultipliedLast
             || image.alphaInfo == .first
@@ -105,14 +133,22 @@ actor CompressionEngine {
             kCGImageDestinationLossyCompressionQuality: options.quality.imageQuality,
             kCGImagePropertyOrientation: 1
         ]
+        await progress(0.78, "正在写入图片")
+        try Task.checkCancellation()
         CGImageDestinationAddImage(destination, image, properties as CFDictionary)
         guard CGImageDestinationFinalize(destination) else {
             throw CompressionError.cannotCreateOutput
         }
+        await progress(0.98, "正在完成")
         return destinationURL
     }
 
-    private func compressVideo(_ sourceURL: URL, options: CompressionOptions) async throws -> URL {
+    private func compressVideo(
+        _ sourceURL: URL,
+        options: CompressionOptions,
+        progress: @escaping CompressionProgressHandler
+    ) async throws -> URL {
+        await progress(0.06, "正在读取视频")
         let asset = AVURLAsset(url: sourceURL)
         let preset: String
         switch options.advanced.videoResolution {
@@ -140,9 +176,34 @@ actor CompressionEngine {
         session.outputURL = destinationURL
         session.outputFileType = .mp4
         session.shouldOptimizeForNetworkUse = options.advanced.videoOptimizeForNetwork
-        await session.export()
+        activeExportSession = session
+        defer {
+            if activeExportSession === session {
+                activeExportSession = nil
+            }
+            if session.status != .completed {
+                try? FileManager.default.removeItem(at: destinationURL)
+            }
+        }
+        await progress(0.10, "正在启动视频压缩")
+        session.exportAsynchronously(completionHandler: {})
+        exportLoop: while true {
+            if Task.isCancelled {
+                session.cancelExport()
+                throw CancellationError()
+            }
+            let value = 0.10 + Double(session.progress) * 0.88
+            await progress(min(value, 0.98), "正在压缩视频")
+            switch session.status {
+            case .unknown, .waiting, .exporting:
+                try await Task.sleep(nanoseconds: 150_000_000)
+            default:
+                break exportLoop
+            }
+        }
         switch session.status {
         case .completed:
+            await progress(0.98, "正在完成")
             return destinationURL
         case .cancelled:
             throw CancellationError()
@@ -151,7 +212,12 @@ actor CompressionEngine {
         }
     }
 
-    private func createArchive(_ sourceURL: URL, options: CompressionOptions) async throws -> URL {
+    private func createArchive(
+        _ sourceURL: URL,
+        options: CompressionOptions,
+        progress: @escaping CompressionProgressHandler
+    ) async throws -> URL {
+        await progress(0.08, "正在准备 ZIP")
         let destinationURL = PathSafety.uniqueURL(
             directory: options.outputDirectory,
             baseName: outputBaseName(
@@ -171,14 +237,27 @@ actor CompressionEngine {
             arguments.append("--keepParent")
         }
         arguments.append(contentsOf: [sourceURL.path, destinationURL.path])
-        _ = try await runTool(
-            "/usr/bin/ditto",
-            arguments: arguments
-        )
+        await progress(0.25, "正在创建 ZIP")
+        try Task.checkCancellation()
+        do {
+            _ = try await runTool(
+                "/usr/bin/ditto",
+                arguments: arguments
+            )
+        } catch {
+            try? FileManager.default.removeItem(at: destinationURL)
+            throw error
+        }
+        await progress(0.98, "正在完成")
         return destinationURL
     }
 
-    private func extractArchive(_ sourceURL: URL, options: CompressionOptions) async throws -> URL {
+    private func extractArchive(
+        _ sourceURL: URL,
+        options: CompressionOptions,
+        progress: @escaping CompressionProgressHandler
+    ) async throws -> URL {
+        await progress(0.06, "正在读取压缩包")
         guard FileClassifier.kind(for: sourceURL) == .archive else {
             throw CompressionError.unsupported(sourceURL.pathExtension)
         }
@@ -197,6 +276,8 @@ actor CompressionEngine {
         }
         let lowerName = sourceURL.lastPathComponent.lowercased()
         let entries: String
+        await progress(0.18, "正在检查文件列表")
+        try Task.checkCancellation()
         if lowerName.hasSuffix(".zip") {
             entries = try await runTool("/usr/bin/unzip", arguments: ["-Z1", sourceURL.path])
         } else if lowerName.hasSuffix(".tar") || lowerName.hasSuffix(".tgz") || lowerName.hasSuffix(".tar.gz") {
@@ -210,21 +291,32 @@ actor CompressionEngine {
                 throw CompressionError.unsafeArchiveEntry(entry)
             }
         }
+        await progress(0.42, "安全检查通过")
         try FileManager.default.createDirectory(
             at: destinationURL,
             withIntermediateDirectories: true
         )
-        if lowerName.hasSuffix(".zip") {
-            _ = try await runTool(
-                "/usr/bin/ditto",
-                arguments: ["-x", "-k", sourceURL.path, destinationURL.path]
-            )
-        } else {
-            _ = try await runTool(
-                "/usr/bin/tar",
-                arguments: ["-xf", sourceURL.path, "-C", destinationURL.path]
-            )
+        await progress(0.58, "正在解压")
+        try Task.checkCancellation()
+        do {
+            if lowerName.hasSuffix(".zip") {
+                _ = try await runTool(
+                    "/usr/bin/ditto",
+                    arguments: ["-x", "-k", sourceURL.path, destinationURL.path]
+                )
+            } else {
+                _ = try await runTool(
+                    "/usr/bin/tar",
+                    arguments: ["-xf", sourceURL.path, "-C", destinationURL.path]
+                )
+            }
+        } catch {
+            if options.advanced.extractCreateSubfolder {
+                try? FileManager.default.removeItem(at: destinationURL)
+            }
+            throw error
         }
+        await progress(0.98, "正在完成")
         return destinationURL
     }
 
@@ -249,19 +341,28 @@ actor CompressionEngine {
     }
 
     private func runTool(_ executable: String, arguments: [String]) async throws -> String {
-        try await withCheckedThrowingContinuation { continuation in
-            let process = Process()
-            let standardOutput = Pipe()
-            let standardError = Pipe()
-            process.executableURL = URL(fileURLWithPath: executable)
-            process.arguments = arguments
-            process.standardOutput = standardOutput
-            process.standardError = standardError
+        let process = Process()
+        let standardOutput = Pipe()
+        let standardError = Pipe()
+        process.executableURL = URL(fileURLWithPath: executable)
+        process.arguments = arguments
+        process.standardOutput = standardOutput
+        process.standardError = standardError
+        activeProcess = process
+        defer {
+            if activeProcess === process {
+                activeProcess = nil
+            }
+        }
+        return try await withCheckedThrowingContinuation { continuation in
             process.terminationHandler = { process in
                 let outputData = standardOutput.fileHandleForReading.readDataToEndOfFile()
                 let errorData = standardError.fileHandleForReading.readDataToEndOfFile()
                 if process.terminationStatus == 0 {
                     continuation.resume(returning: String(decoding: outputData, as: UTF8.self))
+                } else if process.terminationReason == .uncaughtSignal,
+                          process.terminationStatus == SIGTERM {
+                    continuation.resume(throwing: CancellationError())
                 } else {
                     let message = String(decoding: errorData, as: UTF8.self)
                     continuation.resume(

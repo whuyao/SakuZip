@@ -8,6 +8,7 @@ enum JobStatus: Equatable {
     case running
     case completed
     case failed(String)
+    case cancelled
 
     var title: String {
         switch self {
@@ -15,6 +16,7 @@ enum JobStatus: Equatable {
         case .running: "处理中"
         case .completed: "已完成"
         case .failed: "失败"
+        case .cancelled: "已取消"
         }
     }
 }
@@ -27,6 +29,8 @@ struct CompressionJob: Identifiable {
     var outputURL: URL?
     var outputBytes: Int64?
     var status: JobStatus = .waiting
+    var progress: Double = 0
+    var progressDetail: String = "等待中"
 }
 
 @MainActor
@@ -34,10 +38,12 @@ final class JobStore: ObservableObject {
     @Published var jobs: [CompressionJob] = []
     @Published var selectedPreset: WorkflowPreset = WorkflowPreset.builtIns[0]
     @Published var isRunning = false
+    @Published var isPaused = false
     @Published var isDropTargeted = false
     @Published var outputDirectory: URL
 
     private let engine = CompressionEngine()
+    private var processingTask: Task<Void, Never>?
 
     init() {
         let downloads = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask)[0]
@@ -77,6 +83,7 @@ final class JobStore: ObservableObject {
         jobs.removeAll {
             if case .completed = $0.status { return true }
             if case .failed = $0.status { return true }
+            if case .cancelled = $0.status { return true }
             return false
         }
     }
@@ -84,13 +91,26 @@ final class JobStore: ObservableObject {
     func runSelectedWorkflow() {
         guard !isRunning, !jobs.isEmpty else { return }
         isRunning = true
+        isPaused = false
         let preset = selectedPreset
         let destination = outputDirectory
-        Task {
-            defer { isRunning = false }
+        processingTask = Task {
+            defer {
+                isRunning = false
+                isPaused = false
+                processingTask = nil
+            }
             for index in jobs.indices {
+                do {
+                    try await waitWhilePaused()
+                } catch {
+                    break
+                }
                 guard jobs[index].status != .completed else { continue }
                 jobs[index].status = .running
+                jobs[index].progress = 0
+                jobs[index].progressDetail = "正在准备"
+                let jobID = jobs[index].id
                 let options = CompressionOptions(
                     action: preset.action,
                     quality: preset.quality,
@@ -101,7 +121,15 @@ final class JobStore: ObservableObject {
                 do {
                     let output = try await engine.process(
                         url: jobs[index].sourceURL,
-                        options: options
+                        options: options,
+                        progress: { [weak self] value, detail in
+                            guard let self,
+                                  let currentIndex = self.jobs.firstIndex(
+                                      where: { $0.id == jobID }
+                                  ) else { return }
+                            self.jobs[currentIndex].progress = min(max(value, 0), 1)
+                            self.jobs[currentIndex].progressDetail = detail
+                        }
                     )
                     let values = try? output.resourceValues(
                         forKeys: [.fileSizeKey, .totalFileAllocatedSizeKey]
@@ -110,12 +138,19 @@ final class JobStore: ObservableObject {
                     jobs[index].outputBytes = Int64(
                         values?.totalFileAllocatedSize ?? values?.fileSize ?? 0
                     )
+                    jobs[index].progress = 1
+                    jobs[index].progressDetail = "已完成"
                     jobs[index].status = .completed
                     if preset.advanced.revealWhenFinished {
                         NSWorkspace.shared.activateFileViewerSelecting([output])
                     }
+                } catch is CancellationError {
+                    jobs[index].status = .cancelled
+                    jobs[index].progressDetail = "已取消"
+                    break
                 } catch {
                     jobs[index].status = .failed(error.localizedDescription)
+                    jobs[index].progressDetail = "处理失败"
                     if !preset.advanced.continueOnError {
                         break
                     }
@@ -124,9 +159,38 @@ final class JobStore: ObservableObject {
         }
     }
 
-    func revealOutput(_ job: CompressionJob) {
-        guard let outputURL = job.outputURL else { return }
-        NSWorkspace.shared.activateFileViewerSelecting([outputURL])
+    func togglePause() {
+        guard isRunning else { return }
+        isPaused.toggle()
+    }
+
+    func cancelProcessing() {
+        guard isRunning else { return }
+        isPaused = false
+        processingTask?.cancel()
+        Task {
+            await engine.cancelCurrent()
+        }
+    }
+
+    func revealOutput(_ jobID: UUID) {
+        guard let job = jobs.first(where: { $0.id == jobID }),
+              let outputURL = job.outputURL?.standardizedFileURL,
+              FileManager.default.fileExists(atPath: outputURL.path) else { return }
+        var isDirectory: ObjCBool = false
+        FileManager.default.fileExists(atPath: outputURL.path, isDirectory: &isDirectory)
+        if isDirectory.boolValue {
+            NSWorkspace.shared.open(outputURL)
+        } else {
+            NSWorkspace.shared.activateFileViewerSelecting([outputURL])
+        }
+    }
+
+    private func waitWhilePaused() async throws {
+        while isPaused {
+            try Task.checkCancellation()
+            try await Task.sleep(nanoseconds: 100_000_000)
+        }
     }
 }
 

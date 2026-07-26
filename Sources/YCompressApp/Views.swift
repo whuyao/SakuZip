@@ -258,6 +258,24 @@ struct CompressView: View {
             .help("更改输出目录")
             .disabled(jobs.isRunning)
             Spacer()
+            if jobs.isRunning {
+                Button {
+                    jobs.togglePause()
+                } label: {
+                    Label(
+                        jobs.isPaused ? "继续队列" : "暂停队列",
+                        systemImage: jobs.isPaused ? "play.fill" : "pause.fill"
+                    )
+                }
+                .help(jobs.isPaused ? "继续处理下一个文件" : "当前文件完成后暂停")
+
+                Button {
+                    jobs.cancelProcessing()
+                } label: {
+                    Label("取消", systemImage: "stop.fill")
+                }
+                .tint(.red)
+            }
             Button {
                 jobs.runSelectedWorkflow()
             } label: {
@@ -268,7 +286,11 @@ struct CompressView: View {
                     } else {
                         Image(systemName: "play.fill")
                     }
-                    Text(jobs.isRunning ? "处理中…" : "运行工作流")
+                    Text(
+                        jobs.isPaused
+                            ? "队列已暂停"
+                            : (jobs.isRunning ? "处理中…" : "运行工作流")
+                    )
                 }
                 .frame(minWidth: 112)
             }
@@ -337,12 +359,12 @@ struct JobRow: View {
             statusView
             if job.outputURL != nil {
                 Button {
-                    jobs.revealOutput(job)
+                    jobs.revealOutput(job.id)
                 } label: {
                     Image(systemName: "magnifyingglass")
                 }
                 .buttonStyle(.borderless)
-                .help("在 Finder 中显示")
+                .help("在 Finder 中显示：\(job.outputURL?.path ?? "")")
             }
             Button {
                 jobs.remove(job.id)
@@ -365,13 +387,33 @@ struct JobRow: View {
         case .waiting:
             Text("等待中").foregroundStyle(.secondary)
         case .running:
-            ProgressView().controlSize(.small)
+            VStack(alignment: .trailing, spacing: 4) {
+                HStack(spacing: 7) {
+                    ProgressView(value: job.progress)
+                        .frame(width: 92)
+                    Text("\(Int((job.progress * 100).rounded()))%")
+                        .monospacedDigit()
+                        .frame(width: 38, alignment: .trailing)
+                }
+                Text(job.progressDetail)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
         case .completed:
-            Label("完成", systemImage: "checkmark.circle.fill")
+            Label("完成 100%", systemImage: "checkmark.circle.fill")
                 .foregroundStyle(.green)
         case .failed:
-            Label("失败", systemImage: "exclamationmark.triangle.fill")
+            Label(
+                "失败 \(Int((job.progress * 100).rounded()))%",
+                systemImage: "exclamationmark.triangle.fill"
+            )
                 .foregroundStyle(.red)
+        case .cancelled:
+            Label(
+                "已取消 \(Int((job.progress * 100).rounded()))%",
+                systemImage: "xmark.circle.fill"
+            )
+            .foregroundStyle(.orange)
         }
     }
 
