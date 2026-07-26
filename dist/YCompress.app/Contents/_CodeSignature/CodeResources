@@ -8,6 +8,33 @@
 		<data>
 		ci0gNbt/wRjFW8sPtzDeO5TKmWc=
 		</data>
+		<key>Resources/en.lproj/Localizable.strings</key>
+		<dict>
+			<key>hash</key>
+			<data>
+			G1qQXMvFK2lFA0u07CTyTMb0eMo=
+			</data>
+			<key>optional</key>
+			<true/>
+		</dict>
+		<key>Resources/ja.lproj/Localizable.strings</key>
+		<dict>
+			<key>hash</key>
+			<data>
+			EL/6eg3vcYbbNRRdDAobuWBkthM=
+			</data>
+			<key>optional</key>
+			<true/>
+		</dict>
+		<key>Resources/zh-Hans.lproj/Localizable.strings</key>
+		<dict>
+			<key>hash</key>
+			<data>
+			8prT3RXefSNaNS4WBj9yCK4ClAo=
+			</data>
+			<key>optional</key>
+			<true/>
+		</dict>
 	</dict>
 	<key>files2</key>
 	<dict>
@@ -17,6 +44,33 @@
 			<data>
 			0C7w8KMf+izGsCLhSs7bQfmS1y0s/jRP187s+xGXEf0=
 			</data>
+		</dict>
+		<key>Resources/en.lproj/Localizable.strings</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			pO3olYsP2vy84kVOooPjckijbsnGjTJ3RW/cxCE1yuU=
+			</data>
+			<key>optional</key>
+			<true/>
+		</dict>
+		<key>Resources/ja.lproj/Localizable.strings</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			uoB965TtUP7w6OrlEwLRyMxEA5iQiJeHAN2IDSM2nIM=
+			</data>
+			<key>optional</key>
+			<true/>
+		</dict>
+		<key>Resources/zh-Hans.lproj/Localizable.strings</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			bEOgTWqPZVFRI3rZmmDi1S/CjXXPF7c3CvpxdqopxB4=
+			</data>
+			<key>optional</key>
+			<true/>
 		</dict>
 	</dict>
 	<key>rules</key>

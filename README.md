@@ -1,5 +1,7 @@
 # YCompress
 
+[简体中文](README.md) | [English](README.en.md) | [日本語](README.ja.md)
+
 YCompress 是面向 macOS 的原生、离线文件压缩与解压工具。它使用 SwiftUI 构建界面，
 使用 ImageIO 处理图片、AVFoundation 处理视频，并调用 macOS 自带的 `ditto`、`unzip`
 和 `tar` 完成通用文件归档和解压。
@@ -18,6 +20,8 @@ App 图标由 OpenAI ImageGen 生成，项目保留 1254 px PNG 母版，并在�
 - [下载最新版 Apple Silicon 安装包](https://github.com/whuyao/YCompress/releases/latest/download/YCompress-macOS-arm64.zip)
 - [安装说明](docs/INSTALL.md)
 - [使用手册](docs/USER_GUIDE.md)
+- English: [Installation](docs/INSTALL.en.md) · [User Guide](docs/USER_GUIDE.en.md)
+- 日本語：[インストール](docs/INSTALL.ja.md) · [ユーザーガイド](docs/USER_GUIDE.ja.md)
 - [需求与仓库分析](REQUIREMENTS.md)
 
 `dist/` 同时包含可直接运行的 `YCompress.app`、ZIP 安装包和 SHA-256 校验值；
@@ -38,6 +42,7 @@ App 图标由 OpenAI ImageGen 生成，项目保留 1254 px PNG 母版，并在�
 - 结果定位：查看按钮始终按任务 ID 读取最新输出路径，文件选中、文件夹直接打开
 - 结果对比：显示真实节省/增大百分比；视频输出不小于原文件时自动删除无效结果
 - 云文件状态：源文件下载后自动刷新真实大小，避免沿用加入队列时的 0 KB 占位值
+- 多语言：App、安装说明和使用手册支持简体中文、English、日本語，并跟随 macOS 语言
 - 隐私：完全本地处理，不发起网络请求
 
 ## 构建

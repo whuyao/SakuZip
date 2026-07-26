@@ -12,11 +12,11 @@ enum JobStatus: Equatable {
 
     var title: String {
         switch self {
-        case .waiting: "等待中"
-        case .running: "处理中"
-        case .completed: "已完成"
-        case .failed: "失败"
-        case .cancelled: "已取消"
+        case .waiting: L10n.string("等待中")
+        case .running: L10n.string("处理中")
+        case .completed: L10n.string("已完成")
+        case .failed: L10n.string("失败")
+        case .cancelled: L10n.string("已取消")
         }
     }
 }
@@ -30,7 +30,7 @@ struct CompressionJob: Identifiable {
     var outputBytes: Int64?
     var status: JobStatus = .waiting
     var progress: Double = 0
-    var progressDetail: String = "等待中"
+    var progressDetail: String = L10n.string("等待中")
 }
 
 @MainActor
@@ -107,7 +107,7 @@ final class JobStore: ObservableObject {
                 guard jobs[index].status != .completed else { continue }
                 jobs[index].status = .running
                 jobs[index].progress = 0
-                jobs[index].progressDetail = "正在准备"
+                jobs[index].progressDetail = L10n.string("正在准备")
                 let jobID = jobs[index].id
                 refreshOriginalSize(for: jobID)
                 let options = CompressionOptions(
@@ -142,7 +142,7 @@ final class JobStore: ObservableObject {
                         values?.fileSize ?? values?.totalFileAllocatedSize ?? 0
                     )
                     jobs[index].progress = 1
-                    jobs[index].progressDetail = "已完成"
+                    jobs[index].progressDetail = L10n.string("已完成")
                     jobs[index].status = .completed
                     if preset.advanced.revealWhenFinished {
                         NSWorkspace.shared.activateFileViewerSelecting([output])
@@ -150,12 +150,12 @@ final class JobStore: ObservableObject {
                 } catch is CancellationError {
                     refreshOriginalSize(for: jobID)
                     jobs[index].status = .cancelled
-                    jobs[index].progressDetail = "已取消"
+                    jobs[index].progressDetail = L10n.string("已取消")
                     break
                 } catch {
                     refreshOriginalSize(for: jobID)
                     jobs[index].status = .failed(error.localizedDescription)
-                    jobs[index].progressDetail = "处理失败"
+                    jobs[index].progressDetail = L10n.string("处理失败")
                     if !preset.advanced.continueOnError {
                         break
                     }
@@ -222,7 +222,10 @@ final class WorkflowStore: ObservableObject {
             var merged = builtIns
             for preset in saved where preset.isBuiltIn {
                 if let index = merged.firstIndex(where: { $0.id == preset.id }) {
-                    merged[index] = preset
+                    var localizedPreset = preset
+                    localizedPreset.name = merged[index].name
+                    localizedPreset.detail = merged[index].detail
+                    merged[index] = localizedPreset
                 }
             }
             merged.append(contentsOf: saved.filter { !$0.isBuiltIn })
@@ -244,7 +247,7 @@ final class WorkflowStore: ObservableObject {
 
     func add(name: String, action: JobAction, quality: CompressionQuality) {
         let preset = WorkflowPreset(
-            name: name.isEmpty ? "自定义工作流" : name,
+            name: name.isEmpty ? L10n.string("自定义工作流") : name,
             detail: "\(action.title) · \(quality.title)",
             symbol: "slider.horizontal.3",
             action: action,

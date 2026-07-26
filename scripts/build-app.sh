@@ -46,6 +46,11 @@ mkdir -p "$STAGE_APP/Contents/MacOS" "$STAGE_APP/Contents/Resources"
 cp "$PROJECT_DIR/Resources/Info.plist" "$STAGE_APP/Contents/Info.plist"
 cp "$PROJECT_DIR/Resources/AppIcon.icns" "$STAGE_APP/Contents/Resources/AppIcon.icns"
 cp "$BINARY_PATH" "$STAGE_APP/Contents/MacOS/YCompress"
+for localization in zh-Hans en ja; do
+  /usr/bin/ditto \
+    "$PROJECT_DIR/Resources/$localization.lproj" \
+    "$STAGE_APP/Contents/Resources/$localization.lproj"
+done
 chmod +x "$STAGE_APP/Contents/MacOS/YCompress"
 
 xattr -cr "$STAGE_APP"
