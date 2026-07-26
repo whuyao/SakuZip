@@ -8,10 +8,10 @@ public enum MediaKind: String, Codable, CaseIterable, Sendable {
 
     public var title: String {
         switch self {
-        case .image: "图片"
-        case .video: "视频"
-        case .archive: "压缩包"
-        case .file: "文件"
+        case .image: L10n.string("图片")
+        case .video: L10n.string("视频")
+        case .archive: L10n.string("压缩包")
+        case .file: L10n.string("文件")
         }
     }
 }
@@ -25,11 +25,11 @@ public enum JobAction: String, Codable, CaseIterable, Sendable {
 
     public var title: String {
         switch self {
-        case .smart: "智能处理"
-        case .compressImage: "压缩图片"
-        case .compressVideo: "压缩视频"
-        case .createArchive: "创建 ZIP"
-        case .extractArchive: "解压文件"
+        case .smart: L10n.string("智能处理")
+        case .compressImage: L10n.string("压缩图片")
+        case .compressVideo: L10n.string("压缩视频")
+        case .createArchive: L10n.string("创建 ZIP")
+        case .extractArchive: L10n.string("解压文件")
         }
     }
 }
@@ -41,9 +41,9 @@ public enum CompressionQuality: String, Codable, CaseIterable, Sendable {
 
     public var title: String {
         switch self {
-        case .high: "高质量"
-        case .balanced: "均衡"
-        case .compact: "更小体积"
+        case .high: L10n.string("高质量")
+        case .balanced: L10n.string("均衡")
+        case .compact: L10n.string("更小体积")
         }
     }
 
@@ -78,7 +78,7 @@ public enum ImageOutputFormat: String, Codable, CaseIterable, Sendable {
 
     public var title: String {
         switch self {
-        case .automatic: "自动"
+        case .automatic: L10n.string("自动")
         case .jpeg: "JPEG"
         case .png: "PNG"
         case .heic: "HEIC"
@@ -94,10 +94,10 @@ public enum VideoResolution: String, Codable, CaseIterable, Sendable {
 
     public var title: String {
         switch self {
-        case .source: "保持原分辨率"
-        case .fullHD: "最高 1080p"
-        case .hd: "最高 720p"
-        case .compact: "最高 540p"
+        case .source: L10n.string("保持原分辨率")
+        case .fullHD: L10n.string("最高 1080p")
+        case .hd: L10n.string("最高 720p")
+        case .compact: L10n.string("最高 540p")
         }
     }
 }
@@ -194,8 +194,8 @@ public struct WorkflowPreset: Identifiable, Codable, Hashable, Sendable {
     public static let builtIns: [WorkflowPreset] = [
         .init(
             id: UUID(uuidString: "A4C1613A-9289-4A40-8D39-2C6F67519501")!,
-            name: "智能压缩",
-            detail: "自动识别图片、视频和普通文件",
+            name: L10n.string("智能压缩"),
+            detail: L10n.string("自动识别图片、视频和普通文件"),
             symbol: "wand.and.stars",
             action: .smart,
             quality: .balanced,
@@ -204,8 +204,8 @@ public struct WorkflowPreset: Identifiable, Codable, Hashable, Sendable {
         ),
         .init(
             id: UUID(uuidString: "A4C1613A-9289-4A40-8D39-2C6F67519502")!,
-            name: "网页图片",
-            detail: "转为 JPEG，最长边 1920 px",
+            name: L10n.string("网页图片"),
+            detail: L10n.string("转为 JPEG，最长边 1920 px"),
             symbol: "photo.on.rectangle.angled",
             action: .compressImage,
             quality: .balanced,
@@ -214,8 +214,8 @@ public struct WorkflowPreset: Identifiable, Codable, Hashable, Sendable {
         ),
         .init(
             id: UUID(uuidString: "A4C1613A-9289-4A40-8D39-2C6F67519503")!,
-            name: "分享视频",
-            detail: "使用 H.264 兼容预设压缩视频",
+            name: L10n.string("分享视频"),
+            detail: L10n.string("使用 H.264 兼容预设压缩视频"),
             symbol: "video.badge.waveform",
             action: .compressVideo,
             quality: .compact,
@@ -223,8 +223,8 @@ public struct WorkflowPreset: Identifiable, Codable, Hashable, Sendable {
         ),
         .init(
             id: UUID(uuidString: "A4C1613A-9289-4A40-8D39-2C6F67519504")!,
-            name: "归档打包",
-            detail: "将每个项目打包为兼容性良好的 ZIP",
+            name: L10n.string("归档打包"),
+            detail: L10n.string("将每个项目打包为兼容性良好的 ZIP"),
             symbol: "archivebox",
             action: .createArchive,
             quality: .balanced,
@@ -232,8 +232,8 @@ public struct WorkflowPreset: Identifiable, Codable, Hashable, Sendable {
         ),
         .init(
             id: UUID(uuidString: "A4C1613A-9289-4A40-8D39-2C6F67519505")!,
-            name: "安全解压",
-            detail: "检查路径后解压 ZIP、TAR、TGZ",
+            name: L10n.string("安全解压"),
+            detail: L10n.string("检查路径后解压 ZIP、TAR、TGZ"),
             symbol: "shippingbox.and.arrow.backward",
             action: .extractArchive,
             quality: .balanced,

@@ -14,6 +14,12 @@ YCompress 包含四个区域：
 App 侧栏底部、设置页和“帮助”菜单中均可访问
 [UrbanComp 团队网站](https://urbancomp.net)。
 
+## 界面语言
+
+YCompress 支持简体中文、English 和日本語，默认跟随 macOS 的首选语言。若要为
+YCompress 单独指定语言，请打开“系统设置 → 通用 → 语言与地区 → 应用程序”，添加
+YCompress 并选择所需语言，然后重新启动 App。
+
 ## 添加文件
 
 可以使用以下任一方式：

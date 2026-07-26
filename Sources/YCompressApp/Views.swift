@@ -13,10 +13,10 @@ enum SidebarDestination: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .compress: "压缩与解压"
-        case .workflows: "工作流"
-        case .history: "处理记录"
-        case .settings: "设置"
+        case .compress: L10n.string("压缩与解压")
+        case .workflows: L10n.string("工作流")
+        case .history: L10n.string("处理记录")
+        case .settings: L10n.string("设置")
         }
     }
 
@@ -221,7 +221,7 @@ struct CompressView: View {
             .labelsHidden()
             .frame(width: 240)
             Spacer()
-            Text("\(jobs.jobs.count) 个项目")
+            Text(L10n.format("%d 个项目", jobs.jobs.count))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
             Button("清理结果") {
@@ -263,11 +263,17 @@ struct CompressView: View {
                     jobs.togglePause()
                 } label: {
                     Label(
-                        jobs.isPaused ? "继续队列" : "暂停队列",
+                        jobs.isPaused
+                            ? L10n.string("继续队列")
+                            : L10n.string("暂停队列"),
                         systemImage: jobs.isPaused ? "play.fill" : "pause.fill"
                     )
                 }
-                .help(jobs.isPaused ? "继续处理下一个文件" : "当前文件完成后暂停")
+                .help(
+                    jobs.isPaused
+                        ? L10n.string("继续处理下一个文件")
+                        : L10n.string("当前文件完成后暂停")
+                )
 
                 Button {
                     jobs.cancelProcessing()
@@ -288,8 +294,12 @@ struct CompressView: View {
                     }
                     Text(
                         jobs.isPaused
-                            ? "队列已暂停"
-                            : (jobs.isRunning ? "处理中…" : "运行工作流")
+                            ? L10n.string("队列已暂停")
+                            : (
+                                jobs.isRunning
+                                    ? L10n.string("处理中…")
+                                    : L10n.string("运行工作流")
+                            )
                     )
                 }
                 .frame(minWidth: 112)
@@ -369,7 +379,12 @@ struct JobRow: View {
                     Image(systemName: "magnifyingglass")
                 }
                 .buttonStyle(.borderless)
-                .help("在 Finder 中显示：\(job.outputURL?.path ?? "")")
+                .help(
+                    L10n.format(
+                        "在 Finder 中显示：%@",
+                        job.outputURL?.path ?? ""
+                    )
+                )
             }
             Button {
                 jobs.remove(job.id)
@@ -392,16 +407,16 @@ struct JobRow: View {
         }
         let change = (Double(outputBytes) / Double(job.originalBytes) - 1) * 100
         if change <= 0 {
-            return String(format: "节省 %.1f%%", abs(change))
+            return L10n.format("节省 %.1f%%", abs(change))
         }
-        return String(format: "增大 %.1f%%", change)
+        return L10n.format("增大 %.1f%%", change)
     }
 
     private var sourceSizeText: String {
         guard job.originalBytes > 0 else {
             switch job.kind {
             case .image, .video:
-                return "大小待获取（云文件下载中）"
+                return L10n.string("大小待获取（云文件下载中）")
             case .archive, .file:
                 return "0 KB"
             }
@@ -421,7 +436,7 @@ struct JobRow: View {
     private var statusView: some View {
         switch job.status {
         case .waiting:
-            Text("等待中").foregroundStyle(.secondary)
+            Text(L10n.string("等待中")).foregroundStyle(.secondary)
         case .running:
             VStack(alignment: .trailing, spacing: 4) {
                 HStack(spacing: 7) {
@@ -436,17 +451,23 @@ struct JobRow: View {
                     .foregroundStyle(.secondary)
             }
         case .completed:
-            Label("完成 100%", systemImage: "checkmark.circle.fill")
+            Label(L10n.string("完成 100%"), systemImage: "checkmark.circle.fill")
                 .foregroundStyle(.green)
         case .failed:
             Label(
-                "失败 \(Int((job.progress * 100).rounded()))%",
+                L10n.format(
+                    "失败 %d%%",
+                    Int((job.progress * 100).rounded())
+                ),
                 systemImage: "exclamationmark.triangle.fill"
             )
                 .foregroundStyle(.red)
         case .cancelled:
             Label(
-                "已取消 \(Int((job.progress * 100).rounded()))%",
+                L10n.format(
+                    "已取消 %d%%",
+                    Int((job.progress * 100).rounded())
+                ),
                 systemImage: "xmark.circle.fill"
             )
             .foregroundStyle(.orange)
@@ -608,15 +629,19 @@ struct WorkflowCard: View {
     private var parameterSummary: String {
         switch preset.action {
         case .smart:
-            "\(preset.quality.title) · 自动识别"
+            "\(preset.quality.title) · \(L10n.string("自动识别"))"
         case .compressImage:
             "\(preset.advanced.imageFormat.title) · \(preset.quality.title)"
         case .compressVideo:
             "\(preset.advanced.videoResolution.title) · \(preset.quality.title)"
         case .createArchive:
-            preset.advanced.archivePreserveMacMetadata ? "ZIP · 保留元数据" : "ZIP · 通用"
+            preset.advanced.archivePreserveMacMetadata
+                ? L10n.string("ZIP · 保留元数据")
+                : L10n.string("ZIP · 通用")
         case .extractArchive:
-            preset.advanced.extractCreateSubfolder ? "安全 · 独立文件夹" : "安全 · 直接解压"
+            preset.advanced.extractCreateSubfolder
+                ? L10n.string("安全 · 独立文件夹")
+                : L10n.string("安全 · 直接解压")
         }
     }
 }
@@ -635,7 +660,7 @@ struct WorkflowSettingsEditor: View {
         VStack(spacing: 0) {
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("\(draft.name) · 高级参数")
+                    Text(L10n.format("%@ · 高级参数", draft.name))
                         .font(.title2.weight(.bold))
                     Text(draft.action.title)
                         .foregroundStyle(.secondary)
@@ -699,7 +724,10 @@ struct WorkflowSettingsEditor: View {
                         )
                         if draft.advanced.imageMaxDimension != nil {
                             Stepper(
-                                "最长边 \(draft.advanced.imageMaxDimension ?? 1920) px",
+                                L10n.format(
+                                    "最长边 %d px",
+                                    draft.advanced.imageMaxDimension ?? 1920
+                                ),
                                 value: Binding(
                                     get: { draft.advanced.imageMaxDimension ?? 1920 },
                                     set: { draft.advanced.imageMaxDimension = $0 }
@@ -894,7 +922,7 @@ struct SettingsView: View {
                     "版本",
                     value: Bundle.main.object(
                         forInfoDictionaryKey: "CFBundleShortVersionString"
-                    ) as? String ?? "开发版"
+                    ) as? String ?? L10n.string("开发版")
                 )
                 LabeledContent("开发团队") {
                     Link("UrbanComp", destination: URL(string: "https://urbancomp.net")!)
@@ -920,8 +948,8 @@ enum FilePicker {
     @MainActor
     static func addFiles(to jobs: JobStore) {
         let panel = NSOpenPanel()
-        panel.title = "选择要处理的文件"
-        panel.prompt = "添加"
+        panel.title = L10n.string("选择要处理的文件")
+        panel.prompt = L10n.string("添加")
         panel.allowsMultipleSelection = true
         panel.canChooseFiles = true
         panel.canChooseDirectories = true
@@ -934,8 +962,8 @@ enum FilePicker {
     @MainActor
     static func chooseOutput(for jobs: JobStore) {
         let panel = NSOpenPanel()
-        panel.title = "选择输出文件夹"
-        panel.prompt = "选择"
+        panel.title = L10n.string("选择输出文件夹")
+        panel.prompt = L10n.string("选择")
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false

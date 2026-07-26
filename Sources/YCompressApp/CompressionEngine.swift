@@ -18,16 +18,20 @@ enum CompressionError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .unsupported(let value): "暂不支持：\(value)"
-        case .invalidImage: "无法读取图片"
-        case .cannotCreateOutput: "无法创建输出文件"
+        case .unsupported(let value): L10n.format("暂不支持：%@", value)
+        case .invalidImage: L10n.string("无法读取图片")
+        case .cannotCreateOutput: L10n.string("无法创建输出文件")
         case .toolFailed(let message): message
-        case .unsafeArchiveEntry(let entry): "压缩包包含不安全路径：\(entry)"
-        case .exportFailed(let message): "视频导出失败：\(message)"
+        case .unsafeArchiveEntry(let entry):
+            L10n.format("压缩包包含不安全路径：%@", entry)
+        case .exportFailed(let message):
+            L10n.format("视频导出失败：%@", message)
         case .videoAlreadyEfficient:
-            "源视频已高度压缩，所选设置预计无法继续减小；请尝试“更小体积”或更低分辨率"
+            L10n.string(
+                "源视频已高度压缩，所选设置预计无法继续减小；请尝试“更小体积”或更低分辨率"
+            )
         case .outputNotSmaller:
-            "输出文件没有小于源视频，已自动删除无效结果"
+            L10n.string("输出文件没有小于源视频，已自动删除无效结果")
         }
     }
 }
@@ -55,7 +59,7 @@ actor CompressionEngine {
         options: CompressionOptions,
         progress: @escaping CompressionProgressHandler
     ) async throws -> URL {
-        await progress(0.02, "正在准备")
+        await progress(0.02, L10n.string("正在准备"))
         try FileManager.default.createDirectory(
             at: options.outputDirectory,
             withIntermediateDirectories: true
@@ -71,7 +75,7 @@ actor CompressionEngine {
         case .extractArchive:
             return try await extractArchive(url, options: options, progress: progress)
         case .smart:
-            throw CompressionError.unsupported("无法解析智能工作流")
+            throw CompressionError.unsupported(L10n.string("无法解析智能工作流"))
         }
     }
 
@@ -80,13 +84,13 @@ actor CompressionEngine {
         options: CompressionOptions,
         progress: @escaping CompressionProgressHandler
     ) async throws -> URL {
-        await progress(0.08, "正在读取图片")
+        await progress(0.08, L10n.string("正在读取图片"))
         try Task.checkCancellation()
         guard let source = CGImageSourceCreateWithURL(sourceURL as CFURL, nil) else {
             throw CompressionError.invalidImage
         }
 
-        await progress(0.30, "正在缩放图片")
+        await progress(0.30, L10n.string("正在缩放图片"))
         try Task.checkCancellation()
         let image: CGImage?
         if let maxDimension = options.advanced.imageMaxDimension ?? options.maxImageDimension {
@@ -101,7 +105,7 @@ actor CompressionEngine {
         }
         guard let image else { throw CompressionError.invalidImage }
 
-        await progress(0.58, "正在准备输出")
+        await progress(0.58, L10n.string("正在准备输出"))
         try Task.checkCancellation()
         let preservesAlpha = image.alphaInfo == .premultipliedFirst
             || image.alphaInfo == .premultipliedLast
@@ -144,13 +148,13 @@ actor CompressionEngine {
             kCGImageDestinationLossyCompressionQuality: options.quality.imageQuality,
             kCGImagePropertyOrientation: 1
         ]
-        await progress(0.78, "正在写入图片")
+        await progress(0.78, L10n.string("正在写入图片"))
         try Task.checkCancellation()
         CGImageDestinationAddImage(destination, image, properties as CFDictionary)
         guard CGImageDestinationFinalize(destination) else {
             throw CompressionError.cannotCreateOutput
         }
-        await progress(0.98, "正在完成")
+        await progress(0.98, L10n.string("正在完成"))
         return destinationURL
     }
 
@@ -159,7 +163,7 @@ actor CompressionEngine {
         options: CompressionOptions,
         progress: @escaping CompressionProgressHandler
     ) async throws -> URL {
-        await progress(0.06, "正在读取视频")
+        await progress(0.06, L10n.string("正在读取视频"))
         let asset = AVURLAsset(url: sourceURL)
         let destinationURL = PathSafety.uniqueURL(
             directory: options.outputDirectory,
@@ -172,10 +176,10 @@ actor CompressionEngine {
         )
         let sourceBytes = try fileSize(of: sourceURL)
         guard sourceBytes > 0 else {
-            throw CompressionError.unsupported("无法读取源视频大小")
+            throw CompressionError.unsupported(L10n.string("无法读取源视频大小"))
         }
 
-        await progress(0.08, "正在分析源视频码率")
+        await progress(0.08, L10n.string("正在分析源视频码率"))
         let targetBytes = Int64(
             Double(sourceBytes) * options.quality.videoTargetSizeRatio
         )
@@ -192,7 +196,9 @@ actor CompressionEngine {
             asset: asset,
             presetName: selection.preset
         ) else {
-            throw CompressionError.unsupported("此视频编码无法使用所选预设")
+            throw CompressionError.unsupported(
+                L10n.string("此视频编码无法使用所选预设")
+            )
         }
         session.outputURL = destinationURL
         session.outputFileType = .mp4
@@ -210,7 +216,7 @@ actor CompressionEngine {
             0,
             Int((1 - Double(selection.bytes) / Double(sourceBytes)) * 100)
         )
-        await progress(0.10, "预计节省约 \(expectedSaving)%")
+        await progress(0.10, L10n.format("预计节省约 %d%%", expectedSaving))
         session.exportAsynchronously(completionHandler: {})
         exportLoop: while true {
             if Task.isCancelled {
@@ -218,7 +224,7 @@ actor CompressionEngine {
                 throw CancellationError()
             }
             let value = 0.10 + Double(session.progress) * 0.88
-            await progress(min(value, 0.98), "正在压缩视频")
+            await progress(min(value, 0.98), L10n.string("正在压缩视频"))
             switch session.status {
             case .unknown, .waiting, .exporting:
                 try await Task.sleep(nanoseconds: 150_000_000)
@@ -233,12 +239,14 @@ actor CompressionEngine {
                 try? FileManager.default.removeItem(at: destinationURL)
                 throw CompressionError.outputNotSmaller
             }
-            await progress(0.98, "正在完成")
+            await progress(0.98, L10n.string("正在完成"))
             return destinationURL
         case .cancelled:
             throw CancellationError()
         default:
-            throw CompressionError.exportFailed(session.error?.localizedDescription ?? "未知错误")
+            throw CompressionError.exportFailed(
+                session.error?.localizedDescription ?? L10n.string("未知错误")
+            )
         }
     }
 
@@ -342,7 +350,7 @@ actor CompressionEngine {
         options: CompressionOptions,
         progress: @escaping CompressionProgressHandler
     ) async throws -> URL {
-        await progress(0.08, "正在准备 ZIP")
+        await progress(0.08, L10n.string("正在准备 ZIP"))
         let destinationURL = PathSafety.uniqueURL(
             directory: options.outputDirectory,
             baseName: outputBaseName(
@@ -362,7 +370,7 @@ actor CompressionEngine {
             arguments.append("--keepParent")
         }
         arguments.append(contentsOf: [sourceURL.path, destinationURL.path])
-        await progress(0.25, "正在创建 ZIP")
+        await progress(0.25, L10n.string("正在创建 ZIP"))
         try Task.checkCancellation()
         do {
             _ = try await runTool(
@@ -373,7 +381,7 @@ actor CompressionEngine {
             try? FileManager.default.removeItem(at: destinationURL)
             throw error
         }
-        await progress(0.98, "正在完成")
+        await progress(0.98, L10n.string("正在完成"))
         return destinationURL
     }
 
@@ -382,7 +390,7 @@ actor CompressionEngine {
         options: CompressionOptions,
         progress: @escaping CompressionProgressHandler
     ) async throws -> URL {
-        await progress(0.06, "正在读取压缩包")
+        await progress(0.06, L10n.string("正在读取压缩包"))
         guard FileClassifier.kind(for: sourceURL) == .archive else {
             throw CompressionError.unsupported(sourceURL.pathExtension)
         }
@@ -401,7 +409,7 @@ actor CompressionEngine {
         }
         let lowerName = sourceURL.lastPathComponent.lowercased()
         let entries: String
-        await progress(0.18, "正在检查文件列表")
+        await progress(0.18, L10n.string("正在检查文件列表"))
         try Task.checkCancellation()
         if lowerName.hasSuffix(".zip") {
             entries = try await runTool("/usr/bin/unzip", arguments: ["-Z1", sourceURL.path])
@@ -416,12 +424,12 @@ actor CompressionEngine {
                 throw CompressionError.unsafeArchiveEntry(entry)
             }
         }
-        await progress(0.42, "安全检查通过")
+        await progress(0.42, L10n.string("安全检查通过"))
         try FileManager.default.createDirectory(
             at: destinationURL,
             withIntermediateDirectories: true
         )
-        await progress(0.58, "正在解压")
+        await progress(0.58, L10n.string("正在解压"))
         try Task.checkCancellation()
         do {
             if lowerName.hasSuffix(".zip") {
@@ -441,7 +449,7 @@ actor CompressionEngine {
             }
             throw error
         }
-        await progress(0.98, "正在完成")
+        await progress(0.98, L10n.string("正在完成"))
         return destinationURL
     }
 
@@ -492,7 +500,9 @@ actor CompressionEngine {
                     let message = String(decoding: errorData, as: UTF8.self)
                     continuation.resume(
                         throwing: CompressionError.toolFailed(
-                            message.isEmpty ? "系统工具执行失败" : message
+                            message.isEmpty
+                                ? L10n.string("系统工具执行失败")
+                                : message
                         )
                     )
                 }
