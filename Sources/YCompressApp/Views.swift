@@ -33,6 +33,7 @@ enum SidebarDestination: String, CaseIterable, Identifiable {
 struct RootView: View {
     @EnvironmentObject private var jobs: JobStore
     @EnvironmentObject private var workflows: WorkflowStore
+    @EnvironmentObject private var externalFiles: ExternalOpenStore
     @State private var destination: SidebarDestination? = .compress
 
     var body: some View {
@@ -108,6 +109,14 @@ struct RootView: View {
                 where: { $0.id == jobs.selectedPreset.id }
             ) {
                 jobs.selectedPreset = persistedPreset
+            }
+        }
+        .onReceive(externalFiles.$urls) { urls in
+            guard !urls.isEmpty else { return }
+            jobs.add(urls)
+            destination = .compress
+            DispatchQueue.main.async {
+                externalFiles.consume(urls)
             }
         }
     }
@@ -786,7 +795,7 @@ struct SettingsView: View {
     var body: some View {
         Form {
             Section("输出") {
-                LabeledContent("默认文件夹") {
+                LabeledContent("当前文件夹") {
                     HStack {
                         Text(jobs.outputDirectory.path)
                             .lineLimit(1)

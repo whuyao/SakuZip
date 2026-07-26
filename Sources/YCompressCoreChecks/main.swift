@@ -69,4 +69,24 @@ check(
     "legacy workflows should migrate their image dimension"
 )
 
+let sourceFile = URL(fileURLWithPath: "/tmp/YCompress Input/photo.jpg")
+let sourceFolder = URL(
+    fileURLWithPath: "/tmp/YCompress Input/Folder",
+    isDirectory: true
+)
+check(
+    OutputDirectoryResolver.defaultDirectory(for: [sourceFile])?.path
+        == "/tmp/YCompress Input",
+    "file output should default to its source directory"
+)
+check(
+    OutputDirectoryResolver.defaultDirectory(for: [sourceFolder])?.path
+        == "/tmp/YCompress Input",
+    "folder output should default to its parent directory"
+)
+check(
+    OutputDirectoryResolver.defaultDirectory(for: []) == nil,
+    "empty input should not change the output directory"
+)
+
 print("YCompressCoreChecks: all checks passed")

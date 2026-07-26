@@ -52,6 +52,11 @@ mkdir -p "$ZIP_STAGE" "$DMG_STAGE" "$DIST_DIR"
 /bin/cp "$PROJECT_DIR/docs/INSTALL.md" "$DMG_STAGE/安装说明.md"
 /bin/cp "$PROJECT_DIR/docs/USER_GUIDE.md" "$DMG_STAGE/使用手册.md"
 
+for oldDMG in "$PROJECT_DIR"/YCompress-*-macOS-arm64.dmg; do
+  if [[ -f "$oldDMG" && "$oldDMG" != "$ROOT_DMG" ]]; then
+    rm -f "$oldDMG"
+  fi
+done
 rm -f "$ROOT_ZIP" "$ROOT_DMG"
 (
   cd "$ZIP_STAGE"
@@ -79,6 +84,11 @@ rm -f "$ROOT_ZIP" "$ROOT_DMG"
 rm -rf "$DIST_DIR/YCompress.app"
 /usr/bin/ditto "$RELEASE_APP" "$DIST_DIR/YCompress.app"
 /bin/cp "$ROOT_ZIP" "$DIST_DIR/YCompress-macOS-arm64.zip"
+for oldDMG in "$DIST_DIR"/YCompress-*-macOS-arm64.dmg; do
+  if [[ -f "$oldDMG" && "$oldDMG" != "$DIST_DIR/$DMG_NAME" ]]; then
+    rm -f "$oldDMG"
+  fi
+done
 /bin/cp "$ROOT_DMG" "$DIST_DIR/$DMG_NAME"
 /bin/cp "$PROJECT_DIR/SHA256SUMS" "$DIST_DIR/SHA256SUMS"
 

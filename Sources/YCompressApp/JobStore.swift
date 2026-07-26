@@ -45,9 +45,10 @@ final class JobStore: ObservableObject {
     }
 
     func add(_ urls: [URL]) {
-        let existing = Set(jobs.map(\.sourceURL.standardizedFileURL))
+        let shouldAdoptSourceDirectory = jobs.isEmpty
+        var seen = Set(jobs.map(\.sourceURL.standardizedFileURL))
         let newJobs = urls
-            .filter { !existing.contains($0.standardizedFileURL) }
+            .filter { seen.insert($0.standardizedFileURL).inserted }
             .map { url in
                 let values = try? url.resourceValues(forKeys: [.fileSizeKey, .totalFileAllocatedSizeKey])
                 let bytes = Int64(values?.totalFileAllocatedSize ?? values?.fileSize ?? 0)
@@ -57,6 +58,12 @@ final class JobStore: ObservableObject {
                     originalBytes: bytes
                 )
             }
+        if shouldAdoptSourceDirectory,
+           let sourceDirectory = OutputDirectoryResolver.defaultDirectory(
+               for: newJobs.map(\.sourceURL)
+           ) {
+            outputDirectory = sourceDirectory
+        }
         jobs.append(contentsOf: newJobs)
     }
 
