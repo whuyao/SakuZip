@@ -38,9 +38,9 @@ actor CompressionEngine {
         case .compressVideo:
             return try await compressVideo(url, options: options)
         case .createArchive:
-            return try await createArchive(url, outputDirectory: options.outputDirectory)
+            return try await createArchive(url, options: options)
         case .extractArchive:
-            return try await extractArchive(url, outputDirectory: options.outputDirectory)
+            return try await extractArchive(url, options: options)
         case .smart:
             throw CompressionError.unsupported("无法解析智能工作流")
         }
@@ -52,7 +52,7 @@ actor CompressionEngine {
         }
 
         let image: CGImage?
-        if let maxDimension = options.maxImageDimension {
+        if let maxDimension = options.advanced.imageMaxDimension ?? options.maxImageDimension {
             let thumbnailOptions: [CFString: Any] = [
                 kCGImageSourceCreateThumbnailFromImageAlways: true,
                 kCGImageSourceCreateThumbnailWithTransform: true,
@@ -68,11 +68,29 @@ actor CompressionEngine {
             || image.alphaInfo == .premultipliedLast
             || image.alphaInfo == .first
             || image.alphaInfo == .last
-        let fileExtension = preservesAlpha ? "png" : "jpg"
-        let destinationType = preservesAlpha ? UTType.png.identifier : UTType.jpeg.identifier
+        let fileExtension: String
+        let destinationType: String
+        switch options.advanced.imageFormat {
+        case .automatic:
+            fileExtension = preservesAlpha ? "png" : "jpg"
+            destinationType = preservesAlpha ? UTType.png.identifier : UTType.jpeg.identifier
+        case .jpeg:
+            fileExtension = "jpg"
+            destinationType = UTType.jpeg.identifier
+        case .png:
+            fileExtension = "png"
+            destinationType = UTType.png.identifier
+        case .heic:
+            fileExtension = "heic"
+            destinationType = UTType.heic.identifier
+        }
         let destinationURL = PathSafety.uniqueURL(
             directory: options.outputDirectory,
-            baseName: sourceURL.deletingPathExtension().lastPathComponent + "-compressed",
+            baseName: outputBaseName(
+                for: sourceURL,
+                requestedSuffix: options.advanced.outputSuffix,
+                defaultSuffix: "-compressed"
+            ),
             pathExtension: fileExtension
         )
         guard let destination = CGImageDestinationCreateWithURL(
@@ -97,10 +115,12 @@ actor CompressionEngine {
     private func compressVideo(_ sourceURL: URL, options: CompressionOptions) async throws -> URL {
         let asset = AVURLAsset(url: sourceURL)
         let preset: String
-        switch options.quality {
-        case .high:
+        switch options.advanced.videoResolution {
+        case .source:
             preset = AVAssetExportPresetHighestQuality
-        case .balanced:
+        case .fullHD:
+            preset = AVAssetExportPreset1920x1080
+        case .hd:
             preset = AVAssetExportPreset1280x720
         case .compact:
             preset = AVAssetExportPreset960x540
@@ -110,12 +130,16 @@ actor CompressionEngine {
         }
         let destinationURL = PathSafety.uniqueURL(
             directory: options.outputDirectory,
-            baseName: sourceURL.deletingPathExtension().lastPathComponent + "-compressed",
+            baseName: outputBaseName(
+                for: sourceURL,
+                requestedSuffix: options.advanced.outputSuffix,
+                defaultSuffix: "-compressed"
+            ),
             pathExtension: "mp4"
         )
         session.outputURL = destinationURL
         session.outputFileType = .mp4
-        session.shouldOptimizeForNetworkUse = true
+        session.shouldOptimizeForNetworkUse = options.advanced.videoOptimizeForNetwork
         await session.export()
         switch session.status {
         case .completed:
@@ -127,16 +151,23 @@ actor CompressionEngine {
         }
     }
 
-    private func createArchive(_ sourceURL: URL, outputDirectory: URL) async throws -> URL {
+    private func createArchive(_ sourceURL: URL, options: CompressionOptions) async throws -> URL {
         let destinationURL = PathSafety.uniqueURL(
-            directory: outputDirectory,
-            baseName: sourceURL.deletingPathExtension().lastPathComponent,
+            directory: options.outputDirectory,
+            baseName: outputBaseName(
+                for: sourceURL,
+                requestedSuffix: options.advanced.outputSuffix,
+                defaultSuffix: ""
+            ),
             pathExtension: "zip"
         )
         var isDirectory: ObjCBool = false
         FileManager.default.fileExists(atPath: sourceURL.path, isDirectory: &isDirectory)
-        var arguments = ["-c", "-k", "--sequesterRsrc"]
-        if isDirectory.boolValue {
+        var arguments = ["-c", "-k"]
+        if options.advanced.archivePreserveMacMetadata {
+            arguments.append("--sequesterRsrc")
+        }
+        if isDirectory.boolValue && options.advanced.archiveKeepParentFolder {
             arguments.append("--keepParent")
         }
         arguments.append(contentsOf: [sourceURL.path, destinationURL.path])
@@ -147,14 +178,23 @@ actor CompressionEngine {
         return destinationURL
     }
 
-    private func extractArchive(_ sourceURL: URL, outputDirectory: URL) async throws -> URL {
+    private func extractArchive(_ sourceURL: URL, options: CompressionOptions) async throws -> URL {
         guard FileClassifier.kind(for: sourceURL) == .archive else {
             throw CompressionError.unsupported(sourceURL.pathExtension)
         }
-        let destinationURL = uniqueDirectory(
-            parent: outputDirectory,
-            name: sourceURL.deletingPathExtension().lastPathComponent
-        )
+        let destinationURL: URL
+        if options.advanced.extractCreateSubfolder {
+            destinationURL = uniqueDirectory(
+                parent: options.outputDirectory,
+                name: outputBaseName(
+                    for: sourceURL,
+                    requestedSuffix: options.advanced.outputSuffix,
+                    defaultSuffix: ""
+                )
+            )
+        } else {
+            destinationURL = options.outputDirectory
+        }
         let lowerName = sourceURL.lastPathComponent.lowercased()
         let entries: String
         if lowerName.hasSuffix(".zip") {
@@ -186,6 +226,16 @@ actor CompressionEngine {
             )
         }
         return destinationURL
+    }
+
+    private func outputBaseName(
+        for sourceURL: URL,
+        requestedSuffix: String,
+        defaultSuffix: String
+    ) -> String {
+        let suffix = requestedSuffix.trimmingCharacters(in: .whitespacesAndNewlines)
+        return sourceURL.deletingPathExtension().lastPathComponent
+            + (suffix.isEmpty ? defaultSuffix : suffix)
     }
 
     private func uniqueDirectory(parent: URL, name: String) -> URL {

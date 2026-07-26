@@ -34,4 +34,39 @@ let unique = PathSafety.uniqueURL(
 )
 check(unique.path == "/tmp/output/photo 3.jpg", "unique naming should increment suffix")
 
+let builtInIDs = Set(WorkflowPreset.builtIns.map(\.id))
+check(
+    builtInIDs.count == WorkflowPreset.builtIns.count,
+    "built-in workflow IDs must be stable and unique"
+)
+check(
+    WorkflowPreset.builtIns[1].advanced.imageFormat == .jpeg,
+    "web image workflow should default to JPEG"
+)
+check(
+    WorkflowPreset.builtIns[2].advanced.videoResolution == .compact,
+    "sharing video workflow should default to compact resolution"
+)
+
+let legacyPresetJSON = """
+{
+  "id": "89E269D7-0C6F-491A-A1E6-870CFF4A5D35",
+  "name": "Legacy",
+  "detail": "Legacy workflow",
+  "symbol": "gear",
+  "action": "compressImage",
+  "quality": "balanced",
+  "maxImageDimension": 2048,
+  "isBuiltIn": false
+}
+"""
+let migratedPreset = try JSONDecoder().decode(
+    WorkflowPreset.self,
+    from: Data(legacyPresetJSON.utf8)
+)
+check(
+    migratedPreset.advanced.imageMaxDimension == 2048,
+    "legacy workflows should migrate their image dimension"
+)
+
 print("YCompressCoreChecks: all checks passed")

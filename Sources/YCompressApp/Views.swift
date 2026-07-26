@@ -31,6 +31,8 @@ enum SidebarDestination: String, CaseIterable, Identifiable {
 }
 
 struct RootView: View {
+    @EnvironmentObject private var jobs: JobStore
+    @EnvironmentObject private var workflows: WorkflowStore
     @State private var destination: SidebarDestination? = .compress
 
     var body: some View {
@@ -94,11 +96,18 @@ struct RootView: View {
             case .compress:
                 CompressView()
             case .workflows:
-                WorkflowsView()
+                WorkflowsView(destination: $destination)
             case .history:
                 HistoryView()
             case .settings:
                 SettingsView()
+            }
+        }
+        .onAppear {
+            if let persistedPreset = workflows.all.first(
+                where: { $0.id == jobs.selectedPreset.id }
+            ) {
+                jobs.selectedPreset = persistedPreset
             }
         }
     }
@@ -379,7 +388,9 @@ struct JobRow: View {
 struct WorkflowsView: View {
     @EnvironmentObject private var jobs: JobStore
     @EnvironmentObject private var workflows: WorkflowStore
+    @Binding var destination: SidebarDestination?
     @State private var showingCreator = false
+    @State private var editingPreset: WorkflowPreset?
 
     private let columns = [GridItem(.adaptive(minimum: 250), spacing: 16)]
 
@@ -404,7 +415,20 @@ struct WorkflowsView: View {
 
                 LazyVGrid(columns: columns, spacing: 16) {
                     ForEach(workflows.all) { preset in
-                        WorkflowCard(preset: preset)
+                        WorkflowCard(
+                            preset: preset,
+                            isSelected: jobs.selectedPreset.id == preset.id,
+                            onUse: {
+                                jobs.selectedPreset = preset
+                                destination = .compress
+                            },
+                            onEdit: {
+                                editingPreset = preset
+                            },
+                            onDelete: preset.isBuiltIn ? nil : {
+                                workflows.delete(preset)
+                            }
+                        )
                     }
                 }
             }
@@ -414,13 +438,23 @@ struct WorkflowsView: View {
             WorkflowCreator()
                 .environmentObject(workflows)
         }
+        .sheet(item: $editingPreset) { preset in
+            WorkflowSettingsEditor(preset: preset) { updated in
+                workflows.update(updated)
+                if jobs.selectedPreset.id == updated.id {
+                    jobs.selectedPreset = updated
+                }
+            }
+        }
     }
 }
 
 struct WorkflowCard: View {
-    @EnvironmentObject private var jobs: JobStore
-    @EnvironmentObject private var workflows: WorkflowStore
     let preset: WorkflowPreset
+    let isSelected: Bool
+    let onUse: () -> Void
+    let onEdit: () -> Void
+    let onDelete: (() -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -434,9 +468,16 @@ struct WorkflowCard: View {
                 }
                 .frame(width: 48, height: 48)
                 Spacer()
-                if !preset.isBuiltIn {
+                Button {
+                    onEdit()
+                } label: {
+                    Image(systemName: "slider.horizontal.3")
+                }
+                .buttonStyle(.borderless)
+                .help("高级参数")
+                if let onDelete {
                     Button {
-                        workflows.delete(preset)
+                        onDelete()
                     } label: {
                         Image(systemName: "trash")
                     }
@@ -450,16 +491,18 @@ struct WorkflowCard: View {
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, minHeight: 36, alignment: .topLeading)
             HStack {
-                Text(preset.quality.title)
+                Text(parameterSummary)
                     .font(.caption)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(.quaternary, in: Capsule())
                 Spacer()
-                Button("使用") {
-                    jobs.selectedPreset = preset
+                Button {
+                    onUse()
+                } label: {
+                    Label("使用", systemImage: "arrow.right.circle.fill")
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.borderedProminent)
             }
         }
         .padding(16)
@@ -467,12 +510,202 @@ struct WorkflowCard: View {
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color(nsColor: .controlBackgroundColor))
                 .overlay {
-                    if jobs.selectedPreset.id == preset.id {
+                    if isSelected {
                         RoundedRectangle(cornerRadius: 16)
                             .stroke(Color.indigo, lineWidth: 2)
                     }
                 }
         )
+    }
+
+    private var parameterSummary: String {
+        switch preset.action {
+        case .smart:
+            "\(preset.quality.title) · 自动识别"
+        case .compressImage:
+            "\(preset.advanced.imageFormat.title) · \(preset.quality.title)"
+        case .compressVideo:
+            "\(preset.advanced.videoResolution.title) · \(preset.quality.title)"
+        case .createArchive:
+            preset.advanced.archivePreserveMacMetadata ? "ZIP · 保留元数据" : "ZIP · 通用"
+        case .extractArchive:
+            preset.advanced.extractCreateSubfolder ? "安全 · 独立文件夹" : "安全 · 直接解压"
+        }
+    }
+}
+
+struct WorkflowSettingsEditor: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var draft: WorkflowPreset
+    let onSave: (WorkflowPreset) -> Void
+
+    init(preset: WorkflowPreset, onSave: @escaping (WorkflowPreset) -> Void) {
+        _draft = State(initialValue: preset)
+        self.onSave = onSave
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("\(draft.name) · 高级参数")
+                        .font(.title2.weight(.bold))
+                    Text(draft.action.title)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                if draft.isBuiltIn {
+                    Button("恢复默认") {
+                        if let original = WorkflowPreset.builtIns.first(
+                            where: { $0.id == draft.id }
+                        ) {
+                            draft = original
+                        }
+                    }
+                }
+            }
+            .padding(22)
+
+            Divider()
+
+            Form {
+                Section("通用") {
+                    if draft.isBuiltIn {
+                        LabeledContent("工作流名称", value: draft.name)
+                    } else {
+                        TextField("工作流名称", text: $draft.name)
+                    }
+                    LabeledContent("操作", value: draft.action.title)
+                    TextField(
+                        "输出文件后缀（留空使用默认值）",
+                        text: $draft.advanced.outputSuffix
+                    )
+                    Toggle("完成后在 Finder 中显示", isOn: $draft.advanced.revealWhenFinished)
+                    Toggle("单个任务失败后继续队列", isOn: $draft.advanced.continueOnError)
+                }
+
+                if showsQuality {
+                    Section("压缩质量") {
+                        Picker("质量级别", selection: $draft.quality) {
+                            ForEach(CompressionQuality.allCases, id: \.self) {
+                                Text($0.title).tag($0)
+                            }
+                        }
+                    }
+                }
+
+                if showsImageOptions {
+                    Section("图片") {
+                        Picker("输出格式", selection: $draft.advanced.imageFormat) {
+                            ForEach(ImageOutputFormat.allCases, id: \.self) {
+                                Text($0.title).tag($0)
+                            }
+                        }
+                        Toggle(
+                            "限制最长边",
+                            isOn: Binding(
+                                get: { draft.advanced.imageMaxDimension != nil },
+                                set: { enabled in
+                                    draft.advanced.imageMaxDimension = enabled ? 1920 : nil
+                                }
+                            )
+                        )
+                        if draft.advanced.imageMaxDimension != nil {
+                            Stepper(
+                                "最长边 \(draft.advanced.imageMaxDimension ?? 1920) px",
+                                value: Binding(
+                                    get: { draft.advanced.imageMaxDimension ?? 1920 },
+                                    set: { draft.advanced.imageMaxDimension = $0 }
+                                ),
+                                in: 512...8192,
+                                step: 128
+                            )
+                        }
+                    }
+                }
+
+                if showsVideoOptions {
+                    Section("视频") {
+                        Picker("输出分辨率", selection: $draft.advanced.videoResolution) {
+                            ForEach(VideoResolution.allCases, id: \.self) {
+                                Text($0.title).tag($0)
+                            }
+                        }
+                        Toggle(
+                            "针对网络播放优化",
+                            isOn: $draft.advanced.videoOptimizeForNetwork
+                        )
+                    }
+                }
+
+                if showsArchiveOptions {
+                    Section("ZIP 归档") {
+                        Toggle(
+                            "文件夹保留顶层目录",
+                            isOn: $draft.advanced.archiveKeepParentFolder
+                        )
+                        Toggle(
+                            "保留 macOS 资源与扩展元数据",
+                            isOn: $draft.advanced.archivePreserveMacMetadata
+                        )
+                    }
+                }
+
+                if showsExtractOptions {
+                    Section("解压") {
+                        Toggle(
+                            "为每个压缩包创建独立文件夹",
+                            isOn: $draft.advanced.extractCreateSubfolder
+                        )
+                        if !draft.advanced.extractCreateSubfolder {
+                            Text("关闭后会直接写入输出目录，可能替换其中的同名文件。")
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                        }
+                    }
+                }
+            }
+            .formStyle(.grouped)
+
+            Divider()
+
+            HStack {
+                Spacer()
+                Button("取消") {
+                    dismiss()
+                }
+                Button("保存参数") {
+                    draft.maxImageDimension = draft.advanced.imageMaxDimension
+                    onSave(draft)
+                    dismiss()
+                }
+                .buttonStyle(.borderedProminent)
+            }
+            .padding(18)
+        }
+        .frame(width: 580, height: 650)
+    }
+
+    private var showsQuality: Bool {
+        draft.action == .smart
+            || draft.action == .compressImage
+            || draft.action == .compressVideo
+    }
+
+    private var showsImageOptions: Bool {
+        draft.action == .smart || draft.action == .compressImage
+    }
+
+    private var showsVideoOptions: Bool {
+        draft.action == .smart || draft.action == .compressVideo
+    }
+
+    private var showsArchiveOptions: Bool {
+        draft.action == .smart || draft.action == .createArchive
+    }
+
+    private var showsExtractOptions: Bool {
+        draft.action == .extractArchive
     }
 }
 
@@ -570,7 +803,12 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
             Section("关于") {
-                LabeledContent("版本", value: "0.1.1")
+                LabeledContent(
+                    "版本",
+                    value: Bundle.main.object(
+                        forInfoDictionaryKey: "CFBundleShortVersionString"
+                    ) as? String ?? "开发版"
+                )
                 LabeledContent("开发团队") {
                     Link("UrbanComp", destination: URL(string: "https://urbancomp.net")!)
                 }

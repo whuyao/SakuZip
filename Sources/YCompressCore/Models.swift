@@ -56,6 +56,90 @@ public enum CompressionQuality: String, Codable, CaseIterable, Sendable {
     }
 }
 
+public enum ImageOutputFormat: String, Codable, CaseIterable, Sendable {
+    case automatic
+    case jpeg
+    case png
+    case heic
+
+    public var title: String {
+        switch self {
+        case .automatic: "自动"
+        case .jpeg: "JPEG"
+        case .png: "PNG"
+        case .heic: "HEIC"
+        }
+    }
+}
+
+public enum VideoResolution: String, Codable, CaseIterable, Sendable {
+    case source
+    case fullHD
+    case hd
+    case compact
+
+    public var title: String {
+        switch self {
+        case .source: "保持原分辨率"
+        case .fullHD: "1080p"
+        case .hd: "720p"
+        case .compact: "540p"
+        }
+    }
+}
+
+public struct WorkflowAdvancedOptions: Codable, Hashable, Sendable {
+    public var outputSuffix: String
+    public var revealWhenFinished: Bool
+    public var continueOnError: Bool
+    public var imageFormat: ImageOutputFormat
+    public var imageMaxDimension: Int?
+    public var videoResolution: VideoResolution
+    public var videoOptimizeForNetwork: Bool
+    public var archiveKeepParentFolder: Bool
+    public var archivePreserveMacMetadata: Bool
+    public var extractCreateSubfolder: Bool
+
+    public init(
+        outputSuffix: String = "",
+        revealWhenFinished: Bool = false,
+        continueOnError: Bool = true,
+        imageFormat: ImageOutputFormat = .automatic,
+        imageMaxDimension: Int? = nil,
+        videoResolution: VideoResolution = .hd,
+        videoOptimizeForNetwork: Bool = true,
+        archiveKeepParentFolder: Bool = true,
+        archivePreserveMacMetadata: Bool = true,
+        extractCreateSubfolder: Bool = true
+    ) {
+        self.outputSuffix = outputSuffix
+        self.revealWhenFinished = revealWhenFinished
+        self.continueOnError = continueOnError
+        self.imageFormat = imageFormat
+        self.imageMaxDimension = imageMaxDimension
+        self.videoResolution = videoResolution
+        self.videoOptimizeForNetwork = videoOptimizeForNetwork
+        self.archiveKeepParentFolder = archiveKeepParentFolder
+        self.archivePreserveMacMetadata = archivePreserveMacMetadata
+        self.extractCreateSubfolder = extractCreateSubfolder
+    }
+
+    public static func defaults(for action: JobAction) -> WorkflowAdvancedOptions {
+        switch action {
+        case .smart:
+            .init(imageMaxDimension: 2560, videoResolution: .hd)
+        case .compressImage:
+            .init(imageFormat: .jpeg, imageMaxDimension: 1920)
+        case .compressVideo:
+            .init(videoResolution: .compact)
+        case .createArchive:
+            .init()
+        case .extractArchive:
+            .init()
+        }
+    }
+}
+
 public struct WorkflowPreset: Identifiable, Codable, Hashable, Sendable {
     public let id: UUID
     public var name: String
@@ -65,6 +149,7 @@ public struct WorkflowPreset: Identifiable, Codable, Hashable, Sendable {
     public var quality: CompressionQuality
     public var maxImageDimension: Int?
     public var isBuiltIn: Bool
+    public var advanced: WorkflowAdvancedOptions
 
     public init(
         id: UUID = UUID(),
@@ -74,7 +159,8 @@ public struct WorkflowPreset: Identifiable, Codable, Hashable, Sendable {
         action: JobAction,
         quality: CompressionQuality,
         maxImageDimension: Int? = nil,
-        isBuiltIn: Bool = false
+        isBuiltIn: Bool = false,
+        advanced: WorkflowAdvancedOptions? = nil
     ) {
         self.id = id
         self.name = name
@@ -84,10 +170,16 @@ public struct WorkflowPreset: Identifiable, Codable, Hashable, Sendable {
         self.quality = quality
         self.maxImageDimension = maxImageDimension
         self.isBuiltIn = isBuiltIn
+        var resolvedAdvanced = advanced ?? .defaults(for: action)
+        if resolvedAdvanced.imageMaxDimension == nil {
+            resolvedAdvanced.imageMaxDimension = maxImageDimension
+        }
+        self.advanced = resolvedAdvanced
     }
 
     public static let builtIns: [WorkflowPreset] = [
         .init(
+            id: UUID(uuidString: "A4C1613A-9289-4A40-8D39-2C6F67519501")!,
             name: "智能压缩",
             detail: "自动识别图片、视频和普通文件",
             symbol: "wand.and.stars",
@@ -97,6 +189,7 @@ public struct WorkflowPreset: Identifiable, Codable, Hashable, Sendable {
             isBuiltIn: true
         ),
         .init(
+            id: UUID(uuidString: "A4C1613A-9289-4A40-8D39-2C6F67519502")!,
             name: "网页图片",
             detail: "转为 JPEG，最长边 1920 px",
             symbol: "photo.on.rectangle.angled",
@@ -106,6 +199,7 @@ public struct WorkflowPreset: Identifiable, Codable, Hashable, Sendable {
             isBuiltIn: true
         ),
         .init(
+            id: UUID(uuidString: "A4C1613A-9289-4A40-8D39-2C6F67519503")!,
             name: "分享视频",
             detail: "使用 H.264 兼容预设压缩视频",
             symbol: "video.badge.waveform",
@@ -114,6 +208,7 @@ public struct WorkflowPreset: Identifiable, Codable, Hashable, Sendable {
             isBuiltIn: true
         ),
         .init(
+            id: UUID(uuidString: "A4C1613A-9289-4A40-8D39-2C6F67519504")!,
             name: "归档打包",
             detail: "将每个项目打包为兼容性良好的 ZIP",
             symbol: "archivebox",
@@ -122,6 +217,7 @@ public struct WorkflowPreset: Identifiable, Codable, Hashable, Sendable {
             isBuiltIn: true
         ),
         .init(
+            id: UUID(uuidString: "A4C1613A-9289-4A40-8D39-2C6F67519505")!,
             name: "安全解压",
             detail: "检查路径后解压 ZIP、TAR、TGZ",
             symbol: "shippingbox.and.arrow.backward",
@@ -130,6 +226,41 @@ public struct WorkflowPreset: Identifiable, Codable, Hashable, Sendable {
             isBuiltIn: true
         )
     ]
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case detail
+        case symbol
+        case action
+        case quality
+        case maxImageDimension
+        case isBuiltIn
+        case advanced
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        detail = try container.decode(String.self, forKey: .detail)
+        symbol = try container.decode(String.self, forKey: .symbol)
+        action = try container.decode(JobAction.self, forKey: .action)
+        quality = try container.decode(CompressionQuality.self, forKey: .quality)
+        maxImageDimension = try container.decodeIfPresent(Int.self, forKey: .maxImageDimension)
+        isBuiltIn = try container.decodeIfPresent(Bool.self, forKey: .isBuiltIn) ?? false
+        if let decodedAdvanced = try container.decodeIfPresent(
+            WorkflowAdvancedOptions.self,
+            forKey: .advanced
+        ) {
+            advanced = decodedAdvanced
+        } else {
+            advanced = .defaults(for: action)
+            if let maxImageDimension {
+                advanced.imageMaxDimension = maxImageDimension
+            }
+        }
+    }
 }
 
 public struct CompressionOptions: Sendable {
@@ -137,16 +268,19 @@ public struct CompressionOptions: Sendable {
     public var quality: CompressionQuality
     public var maxImageDimension: Int?
     public var outputDirectory: URL
+    public var advanced: WorkflowAdvancedOptions
 
     public init(
         action: JobAction,
         quality: CompressionQuality,
         maxImageDimension: Int?,
-        outputDirectory: URL
+        outputDirectory: URL,
+        advanced: WorkflowAdvancedOptions
     ) {
         self.action = action
         self.quality = quality
         self.maxImageDimension = maxImageDimension
         self.outputDirectory = outputDirectory
+        self.advanced = advanced
     }
 }

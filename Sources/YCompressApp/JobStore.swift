@@ -88,7 +88,8 @@ final class JobStore: ObservableObject {
                     action: preset.action,
                     quality: preset.quality,
                     maxImageDimension: preset.maxImageDimension,
-                    outputDirectory: destination
+                    outputDirectory: destination,
+                    advanced: preset.advanced
                 )
                 do {
                     let output = try await engine.process(
@@ -103,8 +104,14 @@ final class JobStore: ObservableObject {
                         values?.totalFileAllocatedSize ?? values?.fileSize ?? 0
                     )
                     jobs[index].status = .completed
+                    if preset.advanced.revealWhenFinished {
+                        NSWorkspace.shared.activateFileViewerSelecting([output])
+                    }
                 } catch {
                     jobs[index].status = .failed(error.localizedDescription)
+                    if !preset.advanced.continueOnError {
+                        break
+                    }
                 }
             }
         }
@@ -118,14 +125,36 @@ final class JobStore: ObservableObject {
 
 @MainActor
 final class WorkflowStore: ObservableObject {
-    @Published private(set) var custom: [WorkflowPreset] = []
+    @Published private(set) var presets: [WorkflowPreset]
 
-    var all: [WorkflowPreset] { WorkflowPreset.builtIns + custom }
+    var all: [WorkflowPreset] { presets }
+
+    private let storageKey = "workflowPresetsV2"
 
     init() {
-        if let data = UserDefaults.standard.data(forKey: "customWorkflows"),
-           let decoded = try? JSONDecoder().decode([WorkflowPreset].self, from: data) {
-            custom = decoded
+        let builtIns = WorkflowPreset.builtIns
+        if let data = UserDefaults.standard.data(forKey: storageKey),
+           let saved = try? JSONDecoder().decode([WorkflowPreset].self, from: data) {
+            var merged = builtIns
+            for preset in saved where preset.isBuiltIn {
+                if let index = merged.firstIndex(where: { $0.id == preset.id }) {
+                    merged[index] = preset
+                }
+            }
+            merged.append(contentsOf: saved.filter { !$0.isBuiltIn })
+            presets = merged
+        } else {
+            var initial = builtIns
+            if let legacyData = UserDefaults.standard.data(forKey: "customWorkflows"),
+               let legacy = try? JSONDecoder().decode([WorkflowPreset].self, from: legacyData) {
+                initial.append(contentsOf: legacy.map { preset in
+                    var migrated = preset
+                    migrated.isBuiltIn = false
+                    return migrated
+                })
+            }
+            presets = initial
+            save()
         }
     }
 
@@ -137,17 +166,32 @@ final class WorkflowStore: ObservableObject {
             action: action,
             quality: quality
         )
-        custom.append(preset)
+        presets.append(preset)
+        save()
+    }
+
+    func update(_ preset: WorkflowPreset) {
+        guard let index = presets.firstIndex(where: { $0.id == preset.id }) else { return }
+        presets[index] = preset
+        save()
+    }
+
+    func reset(_ preset: WorkflowPreset) {
+        guard preset.isBuiltIn,
+              let original = WorkflowPreset.builtIns.first(where: { $0.id == preset.id }),
+              let index = presets.firstIndex(where: { $0.id == preset.id }) else { return }
+        presets[index] = original
         save()
     }
 
     func delete(_ preset: WorkflowPreset) {
-        custom.removeAll { $0.id == preset.id }
+        guard !preset.isBuiltIn else { return }
+        presets.removeAll { $0.id == preset.id }
         save()
     }
 
     private func save() {
-        guard let data = try? JSONEncoder().encode(custom) else { return }
-        UserDefaults.standard.set(data, forKey: "customWorkflows")
+        guard let data = try? JSONEncoder().encode(presets) else { return }
+        UserDefaults.standard.set(data, forKey: storageKey)
     }
 }
