@@ -1,0 +1,15 @@
+.DS_Store
+.build/
+.swiftpm/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+
+# Local verification artifacts
+*.zip
+*.tar
+*.tgz
+
+# Python helper caches
+__pycache__/
+*.pyc
