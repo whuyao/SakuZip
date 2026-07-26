@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import YCompressCore
 
 @MainActor
 final class ExternalOpenStore: ObservableObject {
@@ -42,6 +43,7 @@ struct YCompressApp: App {
                 .environmentObject(jobs)
                 .environmentObject(workflows)
                 .environmentObject(applicationDelegate.externalOpenStore)
+                .environment(\.locale, L10n.launchLocale)
                 .frame(minWidth: 980, minHeight: 650)
         }
         .windowStyle(.hiddenTitleBar)
@@ -63,7 +65,8 @@ struct YCompressApp: App {
         Settings {
             SettingsView()
                 .environmentObject(jobs)
-                .frame(width: 520, height: 260)
+                .environment(\.locale, L10n.launchLocale)
+                .frame(width: 520, height: 350)
         }
     }
 }

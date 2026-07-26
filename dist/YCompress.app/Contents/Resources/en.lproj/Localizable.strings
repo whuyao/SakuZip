@@ -144,3 +144,7 @@
 "预计节省约 %d%%" = "Estimated saving: about %d%%";
 "高级参数" = "Advanced Settings";
 "高质量" = "High Quality";
+"语言" = "Language";
+"界面语言" = "App Language";
+"跟随系统" = "Follow System";
+"重新启动 YCompress 后应用所选语言。" = "Restart YCompress to apply the selected language.";

@@ -897,9 +897,23 @@ struct HistoryView: View {
 
 struct SettingsView: View {
     @EnvironmentObject private var jobs: JobStore
+    @AppStorage(L10n.languageStorageKey)
+    private var selectedLanguage = AppLanguage.system.rawValue
 
     var body: some View {
         Form {
+            Section("语言") {
+                Picker("界面语言", selection: $selectedLanguage) {
+                    ForEach(AppLanguage.allCases) { language in
+                        Text(language.title).tag(language.rawValue)
+                    }
+                }
+                if selectedLanguage != L10n.launchLanguage.rawValue {
+                    Text("重新启动 YCompress 后应用所选语言。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
             Section("输出") {
                 LabeledContent("当前文件夹") {
                     HStack {
