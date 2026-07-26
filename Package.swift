@@ -2,19 +2,19 @@
 import PackageDescription
 
 let package = Package(
-    name: "YCompress",
+    name: "SakuZip",
     platforms: [
         .macOS(.v13)
     ],
     products: [
-        .executable(name: "YCompress", targets: ["YCompressApp"]),
-        .library(name: "YCompressCore", targets: ["YCompressCore"])
+        .executable(name: "SakuZip", targets: ["SakuZipApp"]),
+        .library(name: "SakuZipCore", targets: ["SakuZipCore"])
     ],
     targets: [
-        .target(name: "YCompressCore"),
+        .target(name: "SakuZipCore"),
         .target(
-            name: "CYCompressArchive",
-            path: "Sources/CYCompressArchive",
+            name: "CSakuZipArchive",
+            path: "Sources/CSakuZipArchive",
             publicHeadersPath: "include",
             cSettings: [
                 .headerSearchPath("minizip"),
@@ -34,8 +34,8 @@ let package = Package(
             ]
         ),
         .executableTarget(
-            name: "YCompressApp",
-            dependencies: ["YCompressCore", "CYCompressArchive"],
+            name: "SakuZipApp",
+            dependencies: ["SakuZipCore", "CSakuZipArchive"],
             linkerSettings: [
                 .linkedFramework("AVFoundation"),
                 .linkedFramework("AppKit"),
@@ -45,12 +45,12 @@ let package = Package(
             ]
         ),
         .executableTarget(
-            name: "YCompressCoreChecks",
-            dependencies: ["YCompressCore"]
+            name: "SakuZipCoreChecks",
+            dependencies: ["SakuZipCore"]
         ),
         .executableTarget(
-            name: "YCompressArchiveChecks",
-            dependencies: ["YCompressCore", "CYCompressArchive"]
+            name: "SakuZipArchiveChecks",
+            dependencies: ["SakuZipCore", "CSakuZipArchive"]
         )
     ],
     swiftLanguageModes: [.v5]

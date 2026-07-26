@@ -1,2 +1,2 @@
-YCompress functional verification fixture.
+SakuZip functional verification fixture.
 This file is intentionally small and contains no private data.

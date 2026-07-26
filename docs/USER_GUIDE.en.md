@@ -1,8 +1,8 @@
-# YCompress User Guide
+# SakuZip User Guide
 
 ## Interface
 
-YCompress has four areas:
+SakuZip has four areas:
 
 - **Compress & Extract**: add items, choose a workflow, and run the queue.
 - **Workflows**: use built-in workflows or create custom ones.
@@ -15,9 +15,9 @@ the sidebar, Settings, and Help menu.
 
 ## Interface language
 
-YCompress supports Simplified Chinese, English, and Japanese. The first launch
+SakuZip supports Simplified Chinese, English, and Japanese. The first launch
 follows the macOS preferred language. You can then choose Follow System or a
-specific language in **YCompress Settings → Language**. The choice is stored
+specific language in **SakuZip Settings → Language**. The choice is stored
 locally and applies after restarting the App, including future launches.
 
 ## Add files
@@ -28,14 +28,14 @@ Use any of these methods:
 2. Click **Choose Files…**.
 3. Click **Add Files** in the upper-right corner.
 4. Choose **File → Add Files…** or press `Command-O`.
-5. In Finder, right-click a file and choose **Open With → YCompress**.
-6. Drop one or more files onto the `YCompress.app` icon.
+5. In Finder, right-click a file and choose **Open With → SakuZip**.
+6. Drop one or more files onto the `SakuZip.app` icon.
 
 The queue can mix images, video, regular files, folders, and archives. The same
 path is not added twice.
 
 If an iCloud Drive or other cloud-backed file has not downloaded yet, its size
-is shown as **Size pending (cloud file downloading)**. YCompress re-reads the
+is shown as **Size pending (cloud file downloading)**. SakuZip re-reads the
 source size during processing and calculates the saving or increase only after a
 positive, current size is available.
 
@@ -90,7 +90,7 @@ Resolution choices:
 - **Up to 540p**: choose among compatible presets no larger than 540p.
 
 High Quality, Balanced, and Smaller Size set different estimated output limits.
-If the actual export is not smaller than the source, YCompress deletes that
+If the actual export is not smaller than the source, SakuZip deletes that
 result and reports the problem. Exact bitrate, CRF, audio tracks, subtitles, and
 encoder selection are not currently exposed. MKV, WebM, or unusual codecs may
 fail when AVFoundation cannot decode them.
@@ -111,14 +111,14 @@ Combining several separate queue items into one ZIP is not currently supported.
 
 ### Password protection
 
-When password protection is enabled, YCompress asks for the password when the
+When password protection is enabled, SakuZip asks for the password when the
 workflow runs. Creation requires confirmation, and a batch can reuse the same
 password for the current queue. The password is not stored in workflows,
 preferences, command-line arguments, or logs, and is cleared after completion,
 cancellation, or exit.
 
 - **AES-256 (Recommended)** is the default secure ZIP option for tools that
-  support WinZip AES, including YCompress, WinZip, and 7-Zip.
+  support WinZip AES, including SakuZip, WinZip, and 7-Zip.
 - **Traditional ZIP Password (Compatibility)** works with older tools but is
   weak and unsuitable for sensitive material.
 
@@ -136,7 +136,7 @@ Supported formats:
 - TGZ
 - TAR.GZ
 
-YCompress checks all archive entry paths before extraction and rejects absolute
+SakuZip checks all archive entry paths before extraction and rejects absolute
 paths, paths containing `..`, and links that may escape the destination. An
 encrypted ZIP prompts for its password and allows retry after a wrong password.
 Failed or cancelled extraction leaves no partial output folder. 7z, RAR, and
@@ -197,7 +197,7 @@ Extraction options:
 Before files are added, the initial folder is:
 
 ```text
-~/Downloads/YCompress
+~/Downloads/SakuZip
 ```
 
 When the first batch is added, the destination changes to the folder containing
@@ -245,20 +245,20 @@ not smaller than the source is deleted automatically.
 
 ### RAR or 7z cannot be extracted
 
-macOS does not include their decoders and YCompress does not bundle third-party
+macOS does not include their decoders and SakuZip does not bundle third-party
 executables in the current release.
 
 ### I forgot the ZIP password
 
-YCompress never stores passwords and cannot recover or bypass one. Keep or
+SakuZip never stores passwords and cannot recover or bypass one. Keep or
 share the password through a secure channel. Visible filenames in an AES ZIP do
 not mean its file contents have been decrypted.
 
 ### History disappears
 
-History is retained only for the current App session. Quitting YCompress does
+History is retained only for the current App session. Quitting SakuZip does
 not delete output files.
 
 ### Are files uploaded?
 
-No. YCompress itself performs no network requests and all processing is local.
+No. SakuZip itself performs no network requests and all processing is local.

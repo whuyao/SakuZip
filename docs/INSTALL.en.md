@@ -1,4 +1,4 @@
-# YCompress Installation Guide
+# SakuZip Installation Guide
 
 ## System requirements
 
@@ -11,18 +11,25 @@ The current release is arm64-only and does not support Intel Macs.
 ## Install from ZIP
 
 1. Download
-   [`YCompress-macOS-arm64.zip`](https://github.com/whuyao/YCompress/releases/latest/download/YCompress-macOS-arm64.zip).
-2. Double-click the ZIP to extract `YCompress.app`.
-3. Drag `YCompress.app` into the Applications folder.
+   [`SakuZip-macOS-arm64.zip`](https://github.com/whuyao/SakuZip/releases/latest/download/SakuZip-macOS-arm64.zip).
+2. Double-click the ZIP to extract `SakuZip.app`.
+3. Drag `SakuZip.app` into the Applications folder.
 4. On first launch, Control-click or right-click the App and choose **Open**.
 5. Choose **Open** again in the macOS confirmation dialog.
 
-You can then launch YCompress from Launchpad, Spotlight, or Applications.
+You can then launch SakuZip from Launchpad, Spotlight, or Applications.
 
 ## Install from DMG
 
-Download `YCompress-0.2.0-macOS-arm64.dmg` from the same Release, open it, and
-drag `YCompress.app` onto the Applications shortcut.
+Download `SakuZip-0.2.1-macOS-arm64.dmg` from the same Release, open it, and
+drag `SakuZip.app` onto the Applications shortcut.
+
+## Upgrade from YCompress
+
+On its first launch, SakuZip automatically imports the interface language and
+workflow settings saved by YCompress. After confirming that SakuZip works, you
+may remove `YCompress.app` from Applications. Removing the old app does not
+affect compressed or extracted files.
 
 ## Why the first launch requires Open
 
@@ -38,10 +45,10 @@ If macOS still reports that the App is damaged and the installer came from this
 repository's GitHub Release, run:
 
 ```bash
-xattr -cr /Applications/YCompress.app
+xattr -cr /Applications/SakuZip.app
 ```
 
-This removes only the downloaded quarantine attributes from YCompress and does
+This removes only the downloaded quarantine attributes from SakuZip and does
 not change the system-wide Gatekeeper setting.
 
 ## Verify the installer
@@ -49,12 +56,12 @@ not change the system-wide Gatekeeper setting.
 In Terminal, change to the folder containing the downloaded files and run:
 
 ```bash
-shasum -a 256 YCompress-macOS-arm64.zip
+shasum -a 256 SakuZip-macOS-arm64.zip
 # Or verify the ZIP and DMG together:
 shasum -a 256 -c SHA256SUMS
 ```
 
-The expected values for version `0.2.0` are included in the `SHA256SUMS` file
+The expected values for version `0.2.1` are included in the `SHA256SUMS` file
 attached to the same Release and in the repository's `dist/` directory. Always
 use the checksum file generated with the same release package.
 
@@ -63,12 +70,12 @@ not install files from an unknown source.
 
 ## Uninstall
 
-1. Quit YCompress.
-2. Move `/Applications/YCompress.app` to the Trash.
+1. Quit SakuZip.
+2. Move `/Applications/SakuZip.app` to the Trash.
 3. To remove custom workflow preferences as well, run:
 
 ```bash
-defaults delete com.yaoyao.ycompress
+defaults delete net.urbancomp.sakuzip
 ```
 
 Deleting preferences does not remove compressed or extracted output files.
@@ -82,10 +89,10 @@ chmod +x scripts/build-app.sh
 ./scripts/build-app.sh
 ```
 
-The generated App is placed at `.build/YCompress.app`.
+The generated App is placed at `.build/SakuZip.app`.
 
 ## Developer
 
-YCompress is developed and maintained by the
+SakuZip is developed and maintained by the
 [UrbanComp](https://urbancomp.net) team. The team website is available from the
 App sidebar, Settings, and Help menu.

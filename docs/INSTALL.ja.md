@@ -1,4 +1,4 @@
-# YCompress インストールガイド
+# SakuZip インストールガイド
 
 ## システム要件
 
@@ -10,10 +10,10 @@
 
 ## ZIPからインストール
 
-1. [`YCompress-macOS-arm64.zip`](https://github.com/whuyao/YCompress/releases/latest/download/YCompress-macOS-arm64.zip)
+1. [`SakuZip-macOS-arm64.zip`](https://github.com/whuyao/SakuZip/releases/latest/download/SakuZip-macOS-arm64.zip)
    をダウンロードします。
-2. ZIPをダブルクリックして`YCompress.app`を展開します。
-3. `YCompress.app`を「アプリケーション」フォルダへドラッグします。
+2. ZIPをダブルクリックして`SakuZip.app`を展開します。
+3. `SakuZip.app`を「アプリケーション」フォルダへドラッグします。
 4. 初回起動時は、Controlキーを押しながらクリックするか右クリックし、**開く**を選びます。
 5. macOSの確認画面でもう一度**開く**を選びます。
 
@@ -21,8 +21,15 @@
 
 ## DMGからインストール
 
-同じReleaseから`YCompress-0.2.0-macOS-arm64.dmg`をダウンロードして開き、
-`YCompress.app`をApplicationsショートカットへドラッグします。
+同じReleaseから`SakuZip-0.2.1-macOS-arm64.dmg`をダウンロードして開き、
+`SakuZip.app`をApplicationsショートカットへドラッグします。
+
+## YCompressからのアップグレード
+
+SakuZipは初回起動時に、YCompressで保存した表示言語とワークフロー設定を自動的に
+取り込みます。SakuZipが正常に動作することを確認した後は、「アプリケーション」
+フォルダの`YCompress.app`を削除できます。旧Appを削除しても、圧縮・展開済みの
+ファイルには影響しません。
 
 ## 初回起動で「開く」が必要な理由
 
@@ -38,10 +45,10 @@ Controlクリックから**開く**方法を使用してください。
 表示する場合は、次を実行します。
 
 ```bash
-xattr -cr /Applications/YCompress.app
+xattr -cr /Applications/SakuZip.app
 ```
 
-このコマンドはYCompressのダウンロード隔離属性だけを削除し、Gatekeeperの
+このコマンドはSakuZipのダウンロード隔離属性だけを削除し、Gatekeeperの
 システム設定は変更しません。
 
 ## インストーラの検証
@@ -49,12 +56,12 @@ xattr -cr /Applications/YCompress.app
 ターミナルでダウンロード先へ移動し、次を実行します。
 
 ```bash
-shasum -a 256 YCompress-macOS-arm64.zip
+shasum -a 256 SakuZip-macOS-arm64.zip
 # ZIPとDMGをまとめて検証：
 shasum -a 256 -c SHA256SUMS
 ```
 
-バージョン`0.2.0`の期待値は、同じReleaseに添付された`SHA256SUMS`と、
+バージョン`0.2.1`の期待値は、同じReleaseに添付された`SHA256SUMS`と、
 リポジトリの`dist/`に含まれています。必ず同じリリースパッケージと同時に生成された
 チェックサムファイルを使用してください。
 
@@ -63,12 +70,12 @@ shasum -a 256 -c SHA256SUMS
 
 ## アンインストール
 
-1. YCompressを終了します。
-2. `/Applications/YCompress.app`をゴミ箱へ移動します。
+1. SakuZipを終了します。
+2. `/Applications/SakuZip.app`をゴミ箱へ移動します。
 3. カスタムワークフロー設定も削除する場合は、次を実行します。
 
 ```bash
-defaults delete com.yaoyao.ycompress
+defaults delete net.urbancomp.sakuzip
 ```
 
 設定を削除しても、圧縮・解凍済みの出力ファイルは削除されません。
@@ -82,9 +89,9 @@ chmod +x scripts/build-app.sh
 ./scripts/build-app.sh
 ```
 
-生成されたAppは`.build/YCompress.app`に配置されます。
+生成されたAppは`.build/SakuZip.app`に配置されます。
 
 ## 開発チーム
 
-YCompressは[UrbanComp](https://urbancomp.net)チームが開発・保守しています。
+SakuZipは[UrbanComp](https://urbancomp.net)チームが開発・保守しています。
 チームサイトはAppのサイドバー、設定、ヘルプメニューから開けます。
