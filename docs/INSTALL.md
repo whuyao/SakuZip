@@ -43,10 +43,10 @@ xattr -cr /Applications/YCompress.app
 shasum -a 256 YCompress-macOS-arm64.zip
 ```
 
-版本 `0.1.1` 的预期 SHA-256：
+版本 `0.1.2` 的预期 SHA-256：
 
 ```text
-6fba24b82a03d9f782b83fa964fb583740c5aa7ff6bfd65ea9c823c595a5cc6d
+7b813a6c2de9908905376210685b102d4b32b101ec4a0597344293dd5ca1281f
 ```
 
 如果结果不同，请重新从 GitHub Release 下载，不要继续安装来源不明的文件。
