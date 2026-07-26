@@ -339,7 +339,7 @@ struct JobRow: View {
                 HStack(spacing: 6) {
                     Text(job.kind.title)
                     Text("·")
-                    Text(ByteCountFormatter.string(fromByteCount: job.originalBytes, countStyle: .file))
+                    Text(sourceSizeText)
                     if let outputBytes = job.outputBytes {
                         Text("→")
                         Text(ByteCountFormatter.string(fromByteCount: outputBytes, countStyle: .file))
@@ -395,6 +395,21 @@ struct JobRow: View {
             return String(format: "节省 %.1f%%", abs(change))
         }
         return String(format: "增大 %.1f%%", change)
+    }
+
+    private var sourceSizeText: String {
+        guard job.originalBytes > 0 else {
+            switch job.kind {
+            case .image, .video:
+                return "大小待获取（云文件下载中）"
+            case .archive, .file:
+                return "0 KB"
+            }
+        }
+        return ByteCountFormatter.string(
+            fromByteCount: job.originalBytes,
+            countStyle: .file
+        )
     }
 
     private var sizeChangeColor: Color {

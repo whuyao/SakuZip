@@ -103,4 +103,33 @@ check(
     "empty input should not change the output directory"
 )
 
+let sizeCheckDirectory = FileManager.default.temporaryDirectory
+    .appendingPathComponent("YCompressCoreChecks-\(UUID().uuidString)", isDirectory: true)
+try FileManager.default.createDirectory(
+    at: sizeCheckDirectory,
+    withIntermediateDirectories: true
+)
+defer {
+    try? FileManager.default.removeItem(at: sizeCheckDirectory)
+}
+let knownSizeFile = sizeCheckDirectory.appendingPathComponent("known-size.bin")
+let knownSizeData = Data(repeating: 0x59, count: 4_321)
+try knownSizeData.write(to: knownSizeFile)
+check(
+    FileSizeResolver.logicalSize(for: knownSizeFile) == Int64(knownSizeData.count),
+    "logical source size should be read from the current file state"
+)
+let emptyFile = sizeCheckDirectory.appendingPathComponent("empty.bin")
+FileManager.default.createFile(atPath: emptyFile.path, contents: Data())
+check(
+    FileSizeResolver.logicalSize(for: emptyFile) == 0,
+    "empty files should retain a zero logical size"
+)
+let hydratedData = Data(repeating: 0x43, count: 8_765)
+try hydratedData.write(to: emptyFile)
+check(
+    FileSizeResolver.logicalSize(for: emptyFile) == Int64(hydratedData.count),
+    "source size should refresh after a placeholder file is hydrated"
+)
+
 print("YCompressCoreChecks: all checks passed")

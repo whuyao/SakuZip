@@ -19,7 +19,7 @@
 
 之后可以像普通 App 一样从 Launchpad、Spotlight 或“应用程序”文件夹启动。
 
-也可以从同一个 Release 下载 `YCompress-0.1.5-macOS-arm64.dmg`：打开 DMG 后，
+也可以从同一个 Release 下载 `YCompress-0.1.6-macOS-arm64.dmg`：打开 DMG 后，
 将 `YCompress.app` 拖到其中的“Applications”快捷方式即可。
 
 ## 为什么首次启动需要右键打开
@@ -48,7 +48,7 @@ shasum -a 256 YCompress-macOS-arm64.zip
 shasum -a 256 -c SHA256SUMS
 ```
 
-版本 `0.1.5` 的预期值记录在同一 Release 附带的 `SHA256SUMS` 中；项目的 `dist/`
+版本 `0.1.6` 的预期值记录在同一 Release 附带的 `SHA256SUMS` 中；项目的 `dist/`
 也保存一份。DMG 与 ZIP 每次重新打包后的字节可能不同，应以同一批次生成的
 `SHA256SUMS` 为准。
 

@@ -35,11 +35,11 @@
         </dict>
     </array>
     <key>CFBundleShortVersionString</key>
-    <string>0.1.5</string>
+    <string>0.1.6</string>
     <key>CFBundleVersion</key>
-    <string>6</string>
+    <string>7</string>
     <key>CFBundleGetInfoString</key>
-    <string>YCompress 0.1.5 · UrbanComp</string>
+    <string>YCompress 0.1.6 · UrbanComp</string>
     <key>NSHumanReadableCopyright</key>
     <string>Copyright © 2026 UrbanComp</string>
     <key>YCompressTeamWebsite</key>

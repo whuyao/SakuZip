@@ -25,7 +25,7 @@ struct CompressionJob: Identifiable {
     let id = UUID()
     let sourceURL: URL
     let kind: MediaKind
-    let originalBytes: Int64
+    var originalBytes: Int64
     var outputURL: URL?
     var outputBytes: Int64?
     var status: JobStatus = .waiting
@@ -56,12 +56,10 @@ final class JobStore: ObservableObject {
         let newJobs = urls
             .filter { seen.insert($0.standardizedFileURL).inserted }
             .map { url in
-                let values = try? url.resourceValues(forKeys: [.fileSizeKey, .totalFileAllocatedSizeKey])
-                let bytes = Int64(values?.fileSize ?? values?.totalFileAllocatedSize ?? 0)
                 return CompressionJob(
                     sourceURL: url,
                     kind: FileClassifier.kind(for: url),
-                    originalBytes: bytes
+                    originalBytes: FileSizeResolver.logicalSize(for: url)
                 )
             }
         if shouldAdoptSourceDirectory,
@@ -111,6 +109,7 @@ final class JobStore: ObservableObject {
                 jobs[index].progress = 0
                 jobs[index].progressDetail = "正在准备"
                 let jobID = jobs[index].id
+                refreshOriginalSize(for: jobID)
                 let options = CompressionOptions(
                     action: preset.action,
                     quality: preset.quality,
@@ -129,8 +128,12 @@ final class JobStore: ObservableObject {
                                   ) else { return }
                             self.jobs[currentIndex].progress = min(max(value, 0), 1)
                             self.jobs[currentIndex].progressDetail = detail
+                            if self.jobs[currentIndex].originalBytes <= 0 {
+                                self.refreshOriginalSize(for: jobID)
+                            }
                         }
                     )
+                    refreshOriginalSize(for: jobID)
                     let values = try? output.resourceValues(
                         forKeys: [.fileSizeKey, .totalFileAllocatedSizeKey]
                     )
@@ -145,10 +148,12 @@ final class JobStore: ObservableObject {
                         NSWorkspace.shared.activateFileViewerSelecting([output])
                     }
                 } catch is CancellationError {
+                    refreshOriginalSize(for: jobID)
                     jobs[index].status = .cancelled
                     jobs[index].progressDetail = "已取消"
                     break
                 } catch {
+                    refreshOriginalSize(for: jobID)
                     jobs[index].status = .failed(error.localizedDescription)
                     jobs[index].progressDetail = "处理失败"
                     if !preset.advanced.continueOnError {
@@ -190,6 +195,14 @@ final class JobStore: ObservableObject {
         while isPaused {
             try Task.checkCancellation()
             try await Task.sleep(nanoseconds: 100_000_000)
+        }
+    }
+
+    private func refreshOriginalSize(for jobID: UUID) {
+        guard let index = jobs.firstIndex(where: { $0.id == jobID }) else { return }
+        let refreshedBytes = FileSizeResolver.logicalSize(for: jobs[index].sourceURL)
+        if refreshedBytes > 0 {
+            jobs[index].originalBytes = refreshedBytes
         }
     }
 }
