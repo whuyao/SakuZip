@@ -33,6 +33,29 @@ struct CompressionJob: Identifiable {
     var progressDetail: String = L10n.string("等待中")
 }
 
+struct ArchivePasswordPrompt: Identifiable {
+    enum Kind {
+        case create
+        case extract
+    }
+
+    let id = UUID()
+    let kind: Kind
+    let title: String
+    let message: String
+    let allowsReuse: Bool
+    let isRetry: Bool
+
+    var requiresConfirmation: Bool {
+        kind == .create
+    }
+}
+
+private struct ArchivePasswordSubmission {
+    let password: ArchivePassword
+    let reuseForQueue: Bool
+}
+
 @MainActor
 final class JobStore: ObservableObject {
     @Published var jobs: [CompressionJob] = []
@@ -41,9 +64,12 @@ final class JobStore: ObservableObject {
     @Published var isPaused = false
     @Published var isDropTargeted = false
     @Published var outputDirectory: URL
+    @Published var archivePasswordPrompt: ArchivePasswordPrompt?
 
     private let engine = CompressionEngine()
     private var processingTask: Task<Void, Never>?
+    private var passwordContinuation:
+        CheckedContinuation<ArchivePasswordSubmission?, Never>?
 
     init() {
         let downloads = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask)[0]
@@ -93,7 +119,14 @@ final class JobStore: ObservableObject {
         let preset = selectedPreset
         let destination = outputDirectory
         processingTask = Task {
+            var sharedPassword: ArchivePassword?
             defer {
+                sharedPassword?.clear()
+                if let passwordContinuation {
+                    self.passwordContinuation = nil
+                    archivePasswordPrompt = nil
+                    passwordContinuation.resume(returning: nil)
+                }
                 isRunning = false
                 isPaused = false
                 processingTask = nil
@@ -110,6 +143,7 @@ final class JobStore: ObservableObject {
                 jobs[index].progressDetail = L10n.string("正在准备")
                 let jobID = jobs[index].id
                 refreshOriginalSize(for: jobID)
+                var jobPassword = sharedPassword
                 let options = CompressionOptions(
                     action: preset.action,
                     quality: preset.quality,
@@ -118,41 +152,109 @@ final class JobStore: ObservableObject {
                     advanced: preset.advanced
                 )
                 do {
-                    let output = try await engine.process(
-                        url: jobs[index].sourceURL,
-                        options: options,
-                        progress: { [weak self] value, detail in
-                            guard let self,
-                                  let currentIndex = self.jobs.firstIndex(
-                                      where: { $0.id == jobID }
-                                  ) else { return }
-                            self.jobs[currentIndex].progress = min(max(value, 0), 1)
-                            self.jobs[currentIndex].progressDetail = detail
-                            if self.jobs[currentIndex].originalBytes <= 0 {
-                                self.refreshOriginalSize(for: jobID)
+                    let resolvedAction = FileClassifier.resolvedAction(
+                        for: jobs[index].sourceURL,
+                        requested: preset.action
+                    )
+                    if resolvedAction == .createArchive,
+                       preset.advanced.archiveEncryption.requiresPassword,
+                       jobPassword == nil {
+                        guard let submission = await requestArchivePassword(
+                            kind: .create,
+                            filename: jobs[index].sourceURL.lastPathComponent,
+                            isRetry: false
+                        ) else {
+                            throw CancellationError()
+                        }
+                        jobPassword = submission.password
+                        if submission.reuseForQueue {
+                            sharedPassword = submission.password
+                        }
+                    }
+                    if resolvedAction == .extractArchive,
+                       jobs[index].sourceURL.lastPathComponent.lowercased().hasSuffix(".zip") {
+                        let inspection = try await engine.inspectArchive(jobs[index].sourceURL)
+                        if inspection.isEncrypted && jobPassword == nil {
+                            guard let submission = await requestArchivePassword(
+                                kind: .extract,
+                                filename: jobs[index].sourceURL.lastPathComponent,
+                                isRetry: false
+                            ) else {
+                                throw CancellationError()
+                            }
+                            jobPassword = submission.password
+                            if submission.reuseForQueue {
+                                sharedPassword = submission.password
                             }
                         }
-                    )
+                    }
+
+                    let output: URL
+                    while true {
+                        do {
+                            output = try await engine.process(
+                                url: jobs[index].sourceURL,
+                                options: options,
+                                archivePassword: jobPassword,
+                                progress: { [weak self] value, detail in
+                                    guard let self,
+                                          let currentIndex = self.jobs.firstIndex(
+                                              where: { $0.id == jobID }
+                                          ) else { return }
+                                    self.jobs[currentIndex].progress = min(max(value, 0), 1)
+                                    self.jobs[currentIndex].progressDetail = detail
+                                    if self.jobs[currentIndex].originalBytes <= 0 {
+                                        self.refreshOriginalSize(for: jobID)
+                                    }
+                                }
+                            )
+                            break
+                        } catch EncryptedArchiveError.incorrectPassword
+                            where resolvedAction == .extractArchive {
+                            if jobPassword === sharedPassword {
+                                sharedPassword?.clear()
+                                sharedPassword = nil
+                            } else {
+                                jobPassword?.clear()
+                            }
+                            jobPassword = nil
+                            guard let submission = await requestArchivePassword(
+                                kind: .extract,
+                                filename: jobs[index].sourceURL.lastPathComponent,
+                                isRetry: true
+                            ) else {
+                                throw CancellationError()
+                            }
+                            jobPassword = submission.password
+                            if submission.reuseForQueue {
+                                sharedPassword = submission.password
+                            }
+                        }
+                    }
                     refreshOriginalSize(for: jobID)
-                    let values = try? output.resourceValues(
-                        forKeys: [.fileSizeKey, .totalFileAllocatedSizeKey]
-                    )
                     jobs[index].outputURL = output
-                    jobs[index].outputBytes = Int64(
-                        values?.fileSize ?? values?.totalFileAllocatedSize ?? 0
-                    )
+                    jobs[index].outputBytes = FileSizeResolver.logicalSize(for: output)
                     jobs[index].progress = 1
                     jobs[index].progressDetail = L10n.string("已完成")
                     jobs[index].status = .completed
                     if preset.advanced.revealWhenFinished {
                         NSWorkspace.shared.activateFileViewerSelecting([output])
                     }
+                    if jobPassword !== sharedPassword {
+                        jobPassword?.clear()
+                    }
                 } catch is CancellationError {
+                    if jobPassword !== sharedPassword {
+                        jobPassword?.clear()
+                    }
                     refreshOriginalSize(for: jobID)
                     jobs[index].status = .cancelled
                     jobs[index].progressDetail = L10n.string("已取消")
                     break
                 } catch {
+                    if jobPassword !== sharedPassword {
+                        jobPassword?.clear()
+                    }
                     refreshOriginalSize(for: jobID)
                     jobs[index].status = .failed(error.localizedDescription)
                     jobs[index].progressDetail = L10n.string("处理失败")
@@ -167,15 +269,43 @@ final class JobStore: ObservableObject {
     func togglePause() {
         guard isRunning else { return }
         isPaused.toggle()
+        let paused = isPaused
+        Task {
+            await engine.setPaused(paused)
+        }
     }
 
     func cancelProcessing() {
         guard isRunning else { return }
         isPaused = false
+        if let passwordContinuation {
+            self.passwordContinuation = nil
+            archivePasswordPrompt = nil
+            passwordContinuation.resume(returning: nil)
+        }
         processingTask?.cancel()
         Task {
             await engine.cancelCurrent()
         }
+    }
+
+    func submitArchivePassword(_ value: String, reuseForQueue: Bool) {
+        guard !value.isEmpty, let passwordContinuation else { return }
+        self.passwordContinuation = nil
+        archivePasswordPrompt = nil
+        passwordContinuation.resume(
+            returning: ArchivePasswordSubmission(
+                password: ArchivePassword(value),
+                reuseForQueue: reuseForQueue
+            )
+        )
+    }
+
+    func cancelArchivePasswordPrompt() {
+        guard let passwordContinuation else { return }
+        self.passwordContinuation = nil
+        archivePasswordPrompt = nil
+        passwordContinuation.resume(returning: nil)
     }
 
     func revealOutput(_ jobID: UUID) {
@@ -195,6 +325,31 @@ final class JobStore: ObservableObject {
         while isPaused {
             try Task.checkCancellation()
             try await Task.sleep(nanoseconds: 100_000_000)
+        }
+    }
+
+    private func requestArchivePassword(
+        kind: ArchivePasswordPrompt.Kind,
+        filename: String,
+        isRetry: Bool
+    ) async -> ArchivePasswordSubmission? {
+        await withCheckedContinuation { continuation in
+            passwordContinuation = continuation
+            archivePasswordPrompt = ArchivePasswordPrompt(
+                kind: kind,
+                title: kind == .create
+                    ? L10n.format("为 %@ 设置 ZIP 密码", filename)
+                    : L10n.format("输入 %@ 的解压密码", filename),
+                message: isRetry
+                    ? L10n.string("密码不正确，请重新输入。")
+                    : (
+                        kind == .create
+                            ? L10n.string("密码不会保存，只在本次处理期间保留在内存中。")
+                            : L10n.string("此 ZIP 已加密。密码不会保存。")
+                    ),
+                allowsReuse: jobs.count > 1,
+                isRetry: isRetry
+            )
         }
     }
 

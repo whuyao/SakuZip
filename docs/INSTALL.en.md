@@ -21,7 +21,7 @@ You can then launch YCompress from Launchpad, Spotlight, or Applications.
 
 ## Install from DMG
 
-Download `YCompress-0.1.7-macOS-arm64.dmg` from the same Release, open it, and
+Download `YCompress-0.2.0-macOS-arm64.dmg` from the same Release, open it, and
 drag `YCompress.app` onto the Applications shortcut.
 
 ## Why the first launch requires Open
@@ -54,7 +54,7 @@ shasum -a 256 YCompress-macOS-arm64.zip
 shasum -a 256 -c SHA256SUMS
 ```
 
-The expected values for version `0.1.7` are included in the `SHA256SUMS` file
+The expected values for version `0.2.0` are included in the `SHA256SUMS` file
 attached to the same Release and in the repository's `dist/` directory. Always
 use the checksum file generated with the same release package.
 

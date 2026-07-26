@@ -45,6 +45,9 @@ BINARY_PATH="$(env \
 mkdir -p "$STAGE_APP/Contents/MacOS" "$STAGE_APP/Contents/Resources"
 cp "$PROJECT_DIR/Resources/Info.plist" "$STAGE_APP/Contents/Info.plist"
 cp "$PROJECT_DIR/Resources/AppIcon.icns" "$STAGE_APP/Contents/Resources/AppIcon.icns"
+cp "$PROJECT_DIR/THIRD_PARTY_NOTICES.md" "$STAGE_APP/Contents/Resources/Third-Party-Notices.md"
+cp "$PROJECT_DIR/Sources/CYCompressArchive/minizip/LICENSE" \
+  "$STAGE_APP/Contents/Resources/minizip-ng-LICENSE.txt"
 cp "$BINARY_PATH" "$STAGE_APP/Contents/MacOS/YCompress"
 for localization in zh-Hans en ja; do
   /usr/bin/ditto \

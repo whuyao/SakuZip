@@ -8,11 +8,15 @@
 		<data>
 		ci0gNbt/wRjFW8sPtzDeO5TKmWc=
 		</data>
+		<key>Resources/Third-Party-Notices.md</key>
+		<data>
+		0pacJUkycswYrDiWab4f36BlX9s=
+		</data>
 		<key>Resources/en.lproj/Localizable.strings</key>
 		<dict>
 			<key>hash</key>
 			<data>
-			ZCUcu3ifRNxjlKYEqdxr55keJEg=
+			BjclS167rjz9oji8wYa/bt4oKF4=
 			</data>
 			<key>optional</key>
 			<true/>
@@ -21,16 +25,20 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			Vf1AuugRTj1JhAtY81b4YCbP/68=
+			I6mFMwIKE2GLbWddfjpOg6LQ8pU=
 			</data>
 			<key>optional</key>
 			<true/>
 		</dict>
+		<key>Resources/minizip-ng-LICENSE.txt</key>
+		<data>
+		F6LTl+RBugQ3i5tHJ0u0h632bEQ=
+		</data>
 		<key>Resources/zh-Hans.lproj/Localizable.strings</key>
 		<dict>
 			<key>hash</key>
 			<data>
-			Pu0OeU54t6CXgR0fTMUveqalB8I=
+			K5tsWPKWxFpXwplcMLGh0KYV4xA=
 			</data>
 			<key>optional</key>
 			<true/>
@@ -45,11 +53,18 @@
 			0C7w8KMf+izGsCLhSs7bQfmS1y0s/jRP187s+xGXEf0=
 			</data>
 		</dict>
+		<key>Resources/Third-Party-Notices.md</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			RzbTxrYkcIugW6/hV8si2RTBqZfA/K5jixIRveeW0QA=
+			</data>
+		</dict>
 		<key>Resources/en.lproj/Localizable.strings</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			00O5ylXDXZP3ND1jadBhsRa714OcbR3zGrXI1mrp1NI=
+			ym1v3GrrzMCdffBhkS7xNjiB6AXIspTL1XypSl6jOOU=
 			</data>
 			<key>optional</key>
 			<true/>
@@ -58,16 +73,23 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			k8iebn/JYCpuTMCovy2LzuA8BuuBJZ2Lv0cT66wMwpE=
+			pYIAUiLZd7x0A08lxTkROOiJuqqP7monOXVTqPziR6o=
 			</data>
 			<key>optional</key>
 			<true/>
+		</dict>
+		<key>Resources/minizip-ng-LICENSE.txt</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			Z1GBwD/BMCochVTAD3vpu0IMXbydzCATQzzsFEQT3gM=
+			</data>
 		</dict>
 		<key>Resources/zh-Hans.lproj/Localizable.strings</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			GGXf95UACKjdf5xt+BQwzWIaJjV44oL6kFSHZyZ6JAg=
+			aAnEsaQo7jpX7grpKT+J2Wb3npd6LkkNfnKut35FcSs=
 			</data>
 			<key>optional</key>
 			<true/>

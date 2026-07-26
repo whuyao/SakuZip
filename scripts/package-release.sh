@@ -51,6 +51,7 @@ mkdir -p "$ZIP_STAGE" "$DMG_STAGE" "$DIST_DIR"
 /bin/cp "$PROJECT_DIR/docs/USER_GUIDE.en.md" "$DMG_STAGE/User Guide (English).md"
 /bin/cp "$PROJECT_DIR/docs/INSTALL.ja.md" "$DMG_STAGE/インストールガイド（日本語）.md"
 /bin/cp "$PROJECT_DIR/docs/USER_GUIDE.ja.md" "$DMG_STAGE/ユーザーガイド（日本語）.md"
+/bin/cp "$PROJECT_DIR/THIRD_PARTY_NOTICES.md" "$DMG_STAGE/Third-Party-Notices.md"
 
 rm -rf "$DIST_APP"
 /usr/bin/ditto "$RELEASE_APP" "$DIST_APP"

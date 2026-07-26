@@ -21,7 +21,7 @@
 
 ## DMGからインストール
 
-同じReleaseから`YCompress-0.1.7-macOS-arm64.dmg`をダウンロードして開き、
+同じReleaseから`YCompress-0.2.0-macOS-arm64.dmg`をダウンロードして開き、
 `YCompress.app`をApplicationsショートカットへドラッグします。
 
 ## 初回起動で「開く」が必要な理由
@@ -54,7 +54,7 @@ shasum -a 256 YCompress-macOS-arm64.zip
 shasum -a 256 -c SHA256SUMS
 ```
 
-バージョン`0.1.7`の期待値は、同じReleaseに添付された`SHA256SUMS`と、
+バージョン`0.2.0`の期待値は、同じReleaseに添付された`SHA256SUMS`と、
 リポジトリの`dist/`に含まれています。必ず同じリリースパッケージと同時に生成された
 チェックサムファイルを使用してください。
 

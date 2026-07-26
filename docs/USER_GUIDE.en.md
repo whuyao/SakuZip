@@ -103,9 +103,29 @@ Choose **Create Archive**, or use Smart Compression with a regular item:
 - A folder can retain its top-level folder name.
 - A single file is placed at the ZIP root.
 - macOS resources and extended metadata can be preserved.
+- Advanced settings offer no password, AES-256 (recommended), or a traditional
+  ZIP compatibility password.
 - Existing output is not overwritten; `2`, `3`, and so on are added as needed.
 
 Combining several separate queue items into one ZIP is not currently supported.
+
+### Password protection
+
+When password protection is enabled, YCompress asks for the password when the
+workflow runs. Creation requires confirmation, and a batch can reuse the same
+password for the current queue. The password is not stored in workflows,
+preferences, command-line arguments, or logs, and is cleared after completion,
+cancellation, or exit.
+
+- **AES-256 (Recommended)** is the default secure ZIP option for tools that
+  support WinZip AES, including YCompress, WinZip, and 7-Zip.
+- **Traditional ZIP Password (Compatibility)** works with older tools but is
+  weak and unsuitable for sensitive material.
+
+Standard ZIP encryption protects file contents, but filenames and folder
+structure may remain visible. Encrypted ZIPs retain normal timestamps and
+permissions; macOS resource and extended metadata preservation applies only to
+unencrypted ZIPs. A password of at least 12 characters is recommended.
 
 ## Safe extraction
 
@@ -117,8 +137,11 @@ Supported formats:
 - TAR.GZ
 
 YCompress checks all archive entry paths before extraction and rejects absolute
-paths and paths containing `..`, reducing Zip Slip risk. 7z, RAR, and single-file
-GZ are not supported.
+paths, paths containing `..`, and links that may escape the destination. An
+encrypted ZIP prompts for its password and allows retry after a wrong password.
+Failed or cancelled extraction leaves no partial output folder. 7z, RAR, and
+single-file GZ are not supported. TAR, TGZ, and TAR.GZ have no standard password
+protection.
 
 ## Custom workflows
 
@@ -157,8 +180,11 @@ Video options:
 
 ZIP options:
 
+- Password protection: None, AES-256 (Recommended), or Traditional ZIP Password
+  (Compatibility). Only the encryption policy is stored; the password is always
+  requested at runtime.
 - Keep the top-level folder.
-- Preserve macOS resources and extended metadata.
+- Preserve macOS resources and extended metadata for unencrypted ZIPs.
 
 Extraction options:
 
@@ -191,14 +217,13 @@ you selected manually. Same-name output is not overwritten.
 - **Failed**: shows the error.
 - **Cancelled**: retains the percentage reached before cancellation.
 
-**Pause Queue** pauses after the current file safely finishes. **Resume Queue**
-continues with the next item. **Cancel** cancels an active video export or
-terminates the ZIP/extraction process; image work stops at the next processing
-checkpoint.
+**Pause Queue** pauses encrypted ZIP work at a data-block boundary. Image,
+video, and system-archive operations pause at a safe checkpoint or after the
+current task. **Resume Queue** continues the current encrypted archive or the
+next item. **Cancel** stops the active operation and removes incomplete output.
 
-Pause is intentionally applied between items because ImageIO, AVFoundation
-exports, and system archive tools do not all support reliable in-place
-suspension. This avoids damaged or partial output.
+Encrypted ZIP work is written to temporary output and committed to the final
+location only after successful integrity checks.
 
 The magnifying-glass button resolves the latest output by task ID. Files are
 selected in Finder and extracted folders are opened directly. **Clear Results**
@@ -222,6 +247,12 @@ not smaller than the source is deleted automatically.
 
 macOS does not include their decoders and YCompress does not bundle third-party
 executables in the current release.
+
+### I forgot the ZIP password
+
+YCompress never stores passwords and cannot recover or bypass one. Keep or
+share the password through a secure channel. Visible filenames in an AES ZIP do
+not mean its file contents have been decrypted.
 
 ### History disappears
 

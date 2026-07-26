@@ -4,7 +4,8 @@
 
 YCompress is a native, offline compression and extraction app for macOS. It uses
 SwiftUI for the interface, ImageIO for images, AVFoundation for video, and the
-built-in macOS tools `ditto`, `unzip`, and `tar` for archives.
+built-in macOS tools `ditto`, `unzip`, and `tar` for regular archives. Encrypted
+ZIP operations run in-process using the bundled minizip-ng library.
 
 Developed and maintained by the [UrbanComp](https://urbancomp.net) team.
 
@@ -30,13 +31,16 @@ GitHub Release.
 - Video compression: MOV, MP4, M4V, and other AVFoundation-readable formats.
   YCompress analyzes the source and selects a compatible preset expected to
   reduce its size.
-- File and folder archiving: create ZIP files while optionally preserving macOS
-  resource information.
-- Safe extraction: ZIP, TAR, TGZ, and TAR.GZ, with absolute paths and `..`
-  traversal rejected before extraction.
+- File and folder archiving: create regular ZIP, AES-256 encrypted ZIP, or
+  traditional compatibility-password ZIP files.
+- Password safety: passwords are requested at runtime and are never stored in
+  workflows, command-line arguments, or logs.
+- Safe extraction: automatically detect regular or encrypted ZIP and also
+  extract TAR, TGZ, and TAR.GZ, rejecting unsafe paths and links first.
 - Batch queue: mix images, video, files, folders, and archives.
-- Queue controls: per-file percentage and stage details, pause after the current
-  item, resume, or cancel processing.
+- Queue controls: per-file percentage and stage details. Encrypted ZIP work can
+  pause within the current entry; other operations pause at a safe checkpoint.
+  Cancellation removes incomplete output.
 - External input: Finder Open With, dropping files onto the App icon, and
   `open -a YCompress <file>`.
 - Workflows: five built-in workflows plus custom workflows, with advanced image,
@@ -76,6 +80,7 @@ Core checks:
 
 ```bash
 swift run YCompressCoreChecks
+swift run YCompressArchiveChecks
 ```
 
 Release packaging:
@@ -100,12 +105,18 @@ YCompress is an independent native Swift implementation. It does not copy or
 link CompressO source code or binaries. Any future direct port of CompressO code
 must comply with AGPL-3.0.
 
+Password-protected ZIP support uses
+[minizip-ng](https://github.com/zlib-ng/minizip-ng) 4.2.2 under the zlib
+license. See [Third-Party Notices](THIRD_PARTY_NOTICES.md).
+
 ## Known limitations
 
 - Video compression uses AVFoundation's discrete compatible presets. It does not
   expose exact bitrate, CRF, audio-track, subtitle, or encoder controls.
 - Animated GIF or WebP files may be reduced to their first frame by ImageIO.
 - Processing history is retained only for the current App session.
+- Standard ZIP encryption protects file contents, but filenames and folder
+  structure may remain visible. TAR/TGZ archives do not support passwords.
 - 7z and RAR are not supported because macOS does not include their decoders.
 
 ## License

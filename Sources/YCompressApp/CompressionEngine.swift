@@ -46,17 +46,37 @@ private struct VideoPresetEstimate {
 actor CompressionEngine {
     private var activeExportSession: AVAssetExportSession?
     private var activeProcess: Process?
+    private var activeArchiveControl: OpaquePointer?
 
     func cancelCurrent() {
         activeExportSession?.cancelExport()
         if activeProcess?.isRunning == true {
             activeProcess?.terminate()
         }
+        EncryptedArchiveBridge.cancel(control: activeArchiveControl)
+    }
+
+    func setPaused(_ paused: Bool) {
+        EncryptedArchiveBridge.setPaused(paused, control: activeArchiveControl)
+    }
+
+    func inspectArchive(_ url: URL) throws -> ArchiveInspection {
+        guard url.lastPathComponent.lowercased().hasSuffix(".zip") else {
+            return ArchiveInspection(
+                totalUncompressedBytes: 0,
+                entryCount: 0,
+                isEncrypted: false,
+                usesAES: false,
+                usesTraditionalEncryption: false
+            )
+        }
+        return try EncryptedArchiveBridge.inspect(url)
     }
 
     func process(
         url: URL,
         options: CompressionOptions,
+        archivePassword: ArchivePassword? = nil,
         progress: @escaping CompressionProgressHandler
     ) async throws -> URL {
         await progress(0.02, L10n.string("正在准备"))
@@ -71,9 +91,19 @@ actor CompressionEngine {
         case .compressVideo:
             return try await compressVideo(url, options: options, progress: progress)
         case .createArchive:
-            return try await createArchive(url, options: options, progress: progress)
+            return try await createArchive(
+                url,
+                options: options,
+                archivePassword: archivePassword,
+                progress: progress
+            )
         case .extractArchive:
-            return try await extractArchive(url, options: options, progress: progress)
+            return try await extractArchive(
+                url,
+                options: options,
+                archivePassword: archivePassword,
+                progress: progress
+            )
         case .smart:
             throw CompressionError.unsupported(L10n.string("无法解析智能工作流"))
         }
@@ -348,6 +378,7 @@ actor CompressionEngine {
     private func createArchive(
         _ sourceURL: URL,
         options: CompressionOptions,
+        archivePassword: ArchivePassword?,
         progress: @escaping CompressionProgressHandler
     ) async throws -> URL {
         await progress(0.08, L10n.string("正在准备 ZIP"))
@@ -362,6 +393,57 @@ actor CompressionEngine {
         )
         var isDirectory: ObjCBool = false
         FileManager.default.fileExists(atPath: sourceURL.path, isDirectory: &isDirectory)
+        if options.advanced.archiveEncryption.requiresPassword {
+            guard let archivePassword, !archivePassword.isEmpty else {
+                throw EncryptedArchiveError.passwordRequired
+            }
+            let partialURL = options.outputDirectory.appendingPathComponent(
+                ".ycompress-\(UUID().uuidString).partial"
+            )
+            let totalBytes = UInt64(max(FileSizeResolver.logicalSize(for: sourceURL), 1))
+            await progress(
+                0.12,
+                options.advanced.archiveEncryption == .aes256
+                    ? L10n.string("正在创建 AES-256 加密 ZIP")
+                    : L10n.string("正在创建兼容加密 ZIP")
+            )
+            var control: OpaquePointer?
+            do {
+                control = try EncryptedArchiveBridge.makeControl()
+                activeArchiveControl = control
+                try await EncryptedArchiveBridge.create(
+                    sourceURL: sourceURL,
+                    destinationURL: partialURL,
+                    password: archivePassword,
+                    encryption: options.advanced.archiveEncryption,
+                    keepParentFolder: isDirectory.boolValue
+                        && options.advanced.archiveKeepParentFolder,
+                    compressionLevel: archiveCompressionLevel(for: options.quality),
+                    totalUncompressedBytes: totalBytes,
+                    control: control!,
+                    progress: { value, entry in
+                        Task { @MainActor in
+                            let detail = entry.isEmpty
+                                ? L10n.string("正在创建加密 ZIP")
+                                : L10n.format("正在加密：%@", entry)
+                            progress(0.12 + value * 0.84, detail)
+                        }
+                    }
+                )
+                try Task.checkCancellation()
+                try FileManager.default.moveItem(at: partialURL, to: destinationURL)
+                activeArchiveControl = nil
+                EncryptedArchiveBridge.deleteControl(&control)
+                await progress(0.98, L10n.string("正在完成"))
+                return destinationURL
+            } catch {
+                activeArchiveControl = nil
+                EncryptedArchiveBridge.deleteControl(&control)
+                try? FileManager.default.removeItem(at: partialURL)
+                try? FileManager.default.removeItem(at: destinationURL)
+                throw error
+            }
+        }
         var arguments = ["-c", "-k"]
         if options.advanced.archivePreserveMacMetadata {
             arguments.append("--sequesterRsrc")
@@ -388,6 +470,7 @@ actor CompressionEngine {
     private func extractArchive(
         _ sourceURL: URL,
         options: CompressionOptions,
+        archivePassword: ArchivePassword?,
         progress: @escaping CompressionProgressHandler
     ) async throws -> URL {
         await progress(0.06, L10n.string("正在读取压缩包"))
@@ -408,6 +491,22 @@ actor CompressionEngine {
             destinationURL = options.outputDirectory
         }
         let lowerName = sourceURL.lastPathComponent.lowercased()
+        if lowerName.hasSuffix(".zip") {
+            let inspection = try EncryptedArchiveBridge.inspect(sourceURL)
+            if inspection.isEncrypted {
+                guard let archivePassword, !archivePassword.isEmpty else {
+                    throw EncryptedArchiveError.passwordRequired
+                }
+                return try await extractEncryptedZIP(
+                    sourceURL,
+                    destinationURL: destinationURL,
+                    outputDirectory: options.outputDirectory,
+                    createSubfolder: options.advanced.extractCreateSubfolder,
+                    password: archivePassword,
+                    progress: progress
+                )
+            }
+        }
         let entries: String
         await progress(0.18, L10n.string("正在检查文件列表"))
         try Task.checkCancellation()
@@ -451,6 +550,93 @@ actor CompressionEngine {
         }
         await progress(0.98, L10n.string("正在完成"))
         return destinationURL
+    }
+
+    private func extractEncryptedZIP(
+        _ sourceURL: URL,
+        destinationURL: URL,
+        outputDirectory: URL,
+        createSubfolder: Bool,
+        password: ArchivePassword,
+        progress: @escaping CompressionProgressHandler
+    ) async throws -> URL {
+        let stagingURL = outputDirectory.appendingPathComponent(
+            ".ycompress-extract-\(UUID().uuidString)",
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(
+            at: stagingURL,
+            withIntermediateDirectories: true
+        )
+        await progress(0.18, L10n.string("加密 ZIP 安全检查通过"))
+        var control: OpaquePointer?
+        do {
+            control = try EncryptedArchiveBridge.makeControl()
+            activeArchiveControl = control
+            try await EncryptedArchiveBridge.extract(
+                archiveURL: sourceURL,
+                destinationURL: stagingURL,
+                password: password,
+                control: control!,
+                progress: { value, entry in
+                    Task { @MainActor in
+                        let detail = entry.isEmpty
+                            ? L10n.string("正在解密 ZIP")
+                            : L10n.format("正在解密：%@", entry)
+                        progress(0.20 + value * 0.76, detail)
+                    }
+                }
+            )
+            try Task.checkCancellation()
+            let committedURL: URL
+            if createSubfolder {
+                try FileManager.default.moveItem(at: stagingURL, to: destinationURL)
+                committedURL = destinationURL
+            } else {
+                try commitStagingContents(
+                    from: stagingURL,
+                    to: outputDirectory
+                )
+                try FileManager.default.removeItem(at: stagingURL)
+                committedURL = outputDirectory
+            }
+            activeArchiveControl = nil
+            EncryptedArchiveBridge.deleteControl(&control)
+            await progress(0.98, L10n.string("正在完成"))
+            return committedURL
+        } catch {
+            activeArchiveControl = nil
+            EncryptedArchiveBridge.deleteControl(&control)
+            try? FileManager.default.removeItem(at: stagingURL)
+            if createSubfolder {
+                try? FileManager.default.removeItem(at: destinationURL)
+            }
+            throw error
+        }
+    }
+
+    private func commitStagingContents(from stagingURL: URL, to destinationURL: URL) throws {
+        let items = try FileManager.default.contentsOfDirectory(
+            at: stagingURL,
+            includingPropertiesForKeys: nil
+        )
+        for item in items {
+            let destination = destinationURL.appendingPathComponent(
+                item.lastPathComponent,
+                isDirectory: item.hasDirectoryPath
+            )
+            if FileManager.default.fileExists(atPath: destination.path) {
+                try FileManager.default.removeItem(at: destination)
+            }
+            try FileManager.default.moveItem(at: item, to: destination)
+        }
+    }
+
+    private func archiveCompressionLevel(for quality: CompressionQuality) -> Int32 {
+        switch quality {
+        case .high, .balanced: 6
+        case .compact: 9
+        }
     }
 
     private func outputBaseName(

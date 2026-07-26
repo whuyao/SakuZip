@@ -144,6 +144,10 @@ struct CompressView: View {
             }
         }
         .background(Color(nsColor: .windowBackgroundColor))
+        .sheet(item: $jobs.archivePasswordPrompt) { prompt in
+            ArchivePasswordSheet(prompt: prompt)
+                .environmentObject(jobs)
+        }
     }
 
     private var header: some View {
@@ -271,8 +275,8 @@ struct CompressView: View {
                 }
                 .help(
                     jobs.isPaused
-                        ? L10n.string("继续处理下一个文件")
-                        : L10n.string("当前文件完成后暂停")
+                        ? L10n.string("继续当前任务或下一个队列项目")
+                        : L10n.string("加密 ZIP 立即暂停，其他任务在安全检查点暂停")
                 )
 
                 Button {
@@ -324,6 +328,108 @@ struct CompressView: View {
             }
         }
         return true
+    }
+}
+
+struct ArchivePasswordSheet: View {
+    @EnvironmentObject private var jobs: JobStore
+    let prompt: ArchivePasswordPrompt
+    @State private var password = ""
+    @State private var confirmation = ""
+    @State private var showsPassword = false
+    @State private var reuseForQueue = true
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(spacing: 12) {
+                Image(systemName: prompt.kind == .create ? "lock.fill" : "lock.open.fill")
+                    .font(.system(size: 28))
+                    .foregroundStyle(.indigo)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(prompt.title)
+                        .font(.title2.weight(.bold))
+                    Text(prompt.message)
+                        .foregroundStyle(prompt.isRetry ? .red : .secondary)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                if showsPassword {
+                    TextField("密码", text: $password)
+                    if prompt.requiresConfirmation {
+                        TextField("确认密码", text: $confirmation)
+                    }
+                } else {
+                    SecureField("密码", text: $password)
+                    if prompt.requiresConfirmation {
+                        SecureField("确认密码", text: $confirmation)
+                    }
+                }
+                Toggle("显示密码", isOn: $showsPassword)
+                    .toggleStyle(.checkbox)
+                if prompt.requiresConfirmation && !confirmation.isEmpty
+                    && password != confirmation {
+                    Label("两次输入的密码不一致", systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                } else if prompt.kind == .create && !password.isEmpty && password.count < 12 {
+                    Label("建议使用至少 12 个字符的密码", systemImage: "exclamationmark.triangle")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
+                if prompt.kind == .create,
+                   jobs.selectedPreset.advanced.archiveEncryption == .traditional {
+                    Label(
+                        "兼容模式使用较弱的传统 ZIP 加密，不适合敏感文件。",
+                        systemImage: "exclamationmark.shield"
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                }
+            }
+            .textFieldStyle(.roundedBorder)
+
+            if prompt.allowsReuse {
+                Toggle("本次队列中的加密 ZIP 使用同一密码", isOn: $reuseForQueue)
+            }
+
+            Text("ZIP 中的文件名和目录结构可能仍然可见。")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Divider()
+
+            HStack {
+                Spacer()
+                Button("取消") {
+                    clearFields()
+                    jobs.cancelArchivePasswordPrompt()
+                }
+                Button(prompt.kind == .create ? "创建加密 ZIP" : "解密并解压") {
+                    let submittedPassword = password
+                    clearFields()
+                    jobs.submitArchivePassword(
+                        submittedPassword,
+                        reuseForQueue: prompt.allowsReuse && reuseForQueue
+                    )
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(!canSubmit)
+            }
+        }
+        .padding(24)
+        .frame(width: 500)
+        .interactiveDismissDisabled()
+    }
+
+    private var canSubmit: Bool {
+        !password.isEmpty
+            && (!prompt.requiresConfirmation || password == confirmation)
+    }
+
+    private func clearFields() {
+        password.removeAll(keepingCapacity: false)
+        confirmation.removeAll(keepingCapacity: false)
     }
 }
 
@@ -635,9 +741,16 @@ struct WorkflowCard: View {
         case .compressVideo:
             "\(preset.advanced.videoResolution.title) · \(preset.quality.title)"
         case .createArchive:
-            preset.advanced.archivePreserveMacMetadata
-                ? L10n.string("ZIP · 保留元数据")
-                : L10n.string("ZIP · 通用")
+            switch preset.advanced.archiveEncryption {
+            case .none:
+                preset.advanced.archivePreserveMacMetadata
+                    ? L10n.string("ZIP · 保留元数据")
+                    : L10n.string("ZIP · 通用")
+            case .aes256:
+                L10n.string("ZIP · AES-256")
+            case .traditional:
+                L10n.string("ZIP · 兼容密码")
+            }
         case .extractArchive:
             preset.advanced.extractCreateSubfolder
                 ? L10n.string("安全 · 独立文件夹")
@@ -755,6 +868,14 @@ struct WorkflowSettingsEditor: View {
 
                 if showsArchiveOptions {
                     Section("ZIP 归档") {
+                        Picker(
+                            "密码保护",
+                            selection: $draft.advanced.archiveEncryption
+                        ) {
+                            ForEach(ArchiveEncryptionMode.allCases, id: \.self) {
+                                Text($0.title).tag($0)
+                            }
+                        }
                         Toggle(
                             "文件夹保留顶层目录",
                             isOn: $draft.advanced.archiveKeepParentFolder
@@ -763,6 +884,19 @@ struct WorkflowSettingsEditor: View {
                             "保留 macOS 资源与扩展元数据",
                             isOn: $draft.advanced.archivePreserveMacMetadata
                         )
+                        .disabled(draft.advanced.archiveEncryption.requiresPassword)
+                        if draft.advanced.archiveEncryption.requiresPassword {
+                            Text(
+                                "密码会在运行工作流时询问，不会保存在工作流中。加密 ZIP 保留常规时间和权限；macOS 扩展元数据仅支持未加密 ZIP。"
+                            )
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        }
+                        if draft.advanced.archiveEncryption == .traditional {
+                            Text("传统 ZIP 加密仅用于兼容旧工具，安全性较弱。")
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                        }
                     }
                 }
 

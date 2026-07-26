@@ -102,6 +102,24 @@ public enum VideoResolution: String, Codable, CaseIterable, Sendable {
     }
 }
 
+public enum ArchiveEncryptionMode: String, Codable, CaseIterable, Sendable {
+    case none
+    case aes256
+    case traditional
+
+    public var title: String {
+        switch self {
+        case .none: L10n.string("不使用密码")
+        case .aes256: L10n.string("AES-256（推荐）")
+        case .traditional: L10n.string("传统 ZIP 密码（兼容模式）")
+        }
+    }
+
+    public var requiresPassword: Bool {
+        self != .none
+    }
+}
+
 public struct WorkflowAdvancedOptions: Codable, Hashable, Sendable {
     public var outputSuffix: String
     public var revealWhenFinished: Bool
@@ -112,6 +130,7 @@ public struct WorkflowAdvancedOptions: Codable, Hashable, Sendable {
     public var videoOptimizeForNetwork: Bool
     public var archiveKeepParentFolder: Bool
     public var archivePreserveMacMetadata: Bool
+    public var archiveEncryption: ArchiveEncryptionMode
     public var extractCreateSubfolder: Bool
 
     public init(
@@ -124,6 +143,7 @@ public struct WorkflowAdvancedOptions: Codable, Hashable, Sendable {
         videoOptimizeForNetwork: Bool = true,
         archiveKeepParentFolder: Bool = true,
         archivePreserveMacMetadata: Bool = true,
+        archiveEncryption: ArchiveEncryptionMode = .none,
         extractCreateSubfolder: Bool = true
     ) {
         self.outputSuffix = outputSuffix
@@ -135,7 +155,46 @@ public struct WorkflowAdvancedOptions: Codable, Hashable, Sendable {
         self.videoOptimizeForNetwork = videoOptimizeForNetwork
         self.archiveKeepParentFolder = archiveKeepParentFolder
         self.archivePreserveMacMetadata = archivePreserveMacMetadata
+        self.archiveEncryption = archiveEncryption
         self.extractCreateSubfolder = extractCreateSubfolder
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case outputSuffix
+        case revealWhenFinished
+        case continueOnError
+        case imageFormat
+        case imageMaxDimension
+        case videoResolution
+        case videoOptimizeForNetwork
+        case archiveKeepParentFolder
+        case archivePreserveMacMetadata
+        case archiveEncryption
+        case extractCreateSubfolder
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        outputSuffix = try container.decodeIfPresent(String.self, forKey: .outputSuffix) ?? ""
+        revealWhenFinished =
+            try container.decodeIfPresent(Bool.self, forKey: .revealWhenFinished) ?? false
+        continueOnError =
+            try container.decodeIfPresent(Bool.self, forKey: .continueOnError) ?? true
+        imageFormat =
+            try container.decodeIfPresent(ImageOutputFormat.self, forKey: .imageFormat) ?? .automatic
+        imageMaxDimension = try container.decodeIfPresent(Int.self, forKey: .imageMaxDimension)
+        videoResolution =
+            try container.decodeIfPresent(VideoResolution.self, forKey: .videoResolution) ?? .hd
+        videoOptimizeForNetwork =
+            try container.decodeIfPresent(Bool.self, forKey: .videoOptimizeForNetwork) ?? true
+        archiveKeepParentFolder =
+            try container.decodeIfPresent(Bool.self, forKey: .archiveKeepParentFolder) ?? true
+        archivePreserveMacMetadata =
+            try container.decodeIfPresent(Bool.self, forKey: .archivePreserveMacMetadata) ?? true
+        archiveEncryption =
+            try container.decodeIfPresent(ArchiveEncryptionMode.self, forKey: .archiveEncryption) ?? .none
+        extractCreateSubfolder =
+            try container.decodeIfPresent(Bool.self, forKey: .extractCreateSubfolder) ?? true
     }
 
     public static func defaults(for action: JobAction) -> WorkflowAdvancedOptions {
