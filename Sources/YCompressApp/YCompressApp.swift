@@ -20,6 +20,12 @@ struct YCompressApp: App {
                 }
                 .keyboardShortcut("o")
             }
+            CommandGroup(after: .help) {
+                Link(
+                    "UrbanComp 团队网站",
+                    destination: URL(string: "https://urbancomp.net")!
+                )
+            }
         }
 
         Settings {

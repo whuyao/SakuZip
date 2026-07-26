@@ -9,6 +9,7 @@ xcuserdata/
 *.zip
 *.tar
 *.tgz
+!dist/YCompress-macOS-arm64.zip
 
 # Python helper caches
 __pycache__/

@@ -4,6 +4,8 @@ YCompress 是面向 macOS 的原生、离线文件压缩与解压工具。它使
 使用 ImageIO 处理图片、AVFoundation 处理视频，并调用 macOS 自带的 `ditto`、`unzip`
 和 `tar` 完成通用文件归档和解压。
 
+由 [UrbanComp](https://urbancomp.net) 团队开发与维护。
+
 [![macOS 13+](https://img.shields.io/badge/macOS-13%2B-black?logo=apple)](https://www.apple.com/macos/)
 [![Swift 6](https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white)](https://www.swift.org/)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -18,8 +20,8 @@ App 图标由 OpenAI ImageGen 生成，项目保留 1254 px PNG 母版，并在�
 - [使用手册](docs/USER_GUIDE.md)
 - [需求与仓库分析](REQUIREMENTS.md)
 
-本地项目目录还会在 `dist/` 中保留安装包副本与 SHA-256 校验值。安装包不直接提交进
-Git 历史，而是作为 GitHub Release 附件发布。
+`dist/` 同时包含可直接运行的 `YCompress.app`、ZIP 安装包和 SHA-256 校验值；
+这些二进制文件也会作为 GitHub Release 附件发布。
 
 ## 当前功能
 
