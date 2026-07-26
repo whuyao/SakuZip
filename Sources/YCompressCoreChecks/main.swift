@@ -47,6 +47,20 @@ check(
     WorkflowPreset.builtIns[2].advanced.videoResolution == .compact,
     "sharing video workflow should default to compact resolution"
 )
+check(
+    CompressionQuality.high.videoTargetSizeRatio
+        > CompressionQuality.balanced.videoTargetSizeRatio,
+    "high video quality should allow a larger output than balanced"
+)
+check(
+    CompressionQuality.balanced.videoTargetSizeRatio
+        > CompressionQuality.compact.videoTargetSizeRatio,
+    "compact video quality should target the smallest output"
+)
+check(
+    CompressionQuality.high.videoTargetSizeRatio < 1,
+    "every video quality must target an output smaller than the source"
+)
 
 let legacyPresetJSON = """
 {

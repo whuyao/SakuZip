@@ -13,6 +13,8 @@ enum CompressionError: LocalizedError {
     case toolFailed(String)
     case unsafeArchiveEntry(String)
     case exportFailed(String)
+    case videoAlreadyEfficient
+    case outputNotSmaller
 
     var errorDescription: String? {
         switch self {
@@ -22,11 +24,20 @@ enum CompressionError: LocalizedError {
         case .toolFailed(let message): message
         case .unsafeArchiveEntry(let entry): "压缩包包含不安全路径：\(entry)"
         case .exportFailed(let message): "视频导出失败：\(message)"
+        case .videoAlreadyEfficient:
+            "源视频已高度压缩，所选设置预计无法继续减小；请尝试“更小体积”或更低分辨率"
+        case .outputNotSmaller:
+            "输出文件没有小于源视频，已自动删除无效结果"
         }
     }
 }
 
 typealias CompressionProgressHandler = @MainActor @Sendable (Double, String) -> Void
+
+private struct VideoPresetEstimate {
+    let preset: String
+    let bytes: Int64
+}
 
 actor CompressionEngine {
     private var activeExportSession: AVAssetExportSession?
@@ -150,20 +161,6 @@ actor CompressionEngine {
     ) async throws -> URL {
         await progress(0.06, "正在读取视频")
         let asset = AVURLAsset(url: sourceURL)
-        let preset: String
-        switch options.advanced.videoResolution {
-        case .source:
-            preset = AVAssetExportPresetHighestQuality
-        case .fullHD:
-            preset = AVAssetExportPreset1920x1080
-        case .hd:
-            preset = AVAssetExportPreset1280x720
-        case .compact:
-            preset = AVAssetExportPreset960x540
-        }
-        guard let session = AVAssetExportSession(asset: asset, presetName: preset) else {
-            throw CompressionError.unsupported("此视频编码无法使用所选预设")
-        }
         let destinationURL = PathSafety.uniqueURL(
             directory: options.outputDirectory,
             baseName: outputBaseName(
@@ -173,6 +170,30 @@ actor CompressionEngine {
             ),
             pathExtension: "mp4"
         )
+        let sourceBytes = try fileSize(of: sourceURL)
+        guard sourceBytes > 0 else {
+            throw CompressionError.unsupported("无法读取源视频大小")
+        }
+
+        await progress(0.08, "正在分析源视频码率")
+        let targetBytes = Int64(
+            Double(sourceBytes) * options.quality.videoTargetSizeRatio
+        )
+        let selection = try await selectVideoPreset(
+            asset: asset,
+            destinationURL: destinationURL,
+            resolution: options.advanced.videoResolution,
+            sourceBytes: sourceBytes,
+            targetBytes: targetBytes
+        )
+        try Task.checkCancellation()
+
+        guard let session = AVAssetExportSession(
+            asset: asset,
+            presetName: selection.preset
+        ) else {
+            throw CompressionError.unsupported("此视频编码无法使用所选预设")
+        }
         session.outputURL = destinationURL
         session.outputFileType = .mp4
         session.shouldOptimizeForNetworkUse = options.advanced.videoOptimizeForNetwork
@@ -185,7 +206,11 @@ actor CompressionEngine {
                 try? FileManager.default.removeItem(at: destinationURL)
             }
         }
-        await progress(0.10, "正在启动视频压缩")
+        let expectedSaving = max(
+            0,
+            Int((1 - Double(selection.bytes) / Double(sourceBytes)) * 100)
+        )
+        await progress(0.10, "预计节省约 \(expectedSaving)%")
         session.exportAsynchronously(completionHandler: {})
         exportLoop: while true {
             if Task.isCancelled {
@@ -203,6 +228,11 @@ actor CompressionEngine {
         }
         switch session.status {
         case .completed:
+            let outputBytes = try fileSize(of: destinationURL)
+            guard outputBytes < sourceBytes else {
+                try? FileManager.default.removeItem(at: destinationURL)
+                throw CompressionError.outputNotSmaller
+            }
             await progress(0.98, "正在完成")
             return destinationURL
         case .cancelled:
@@ -210,6 +240,101 @@ actor CompressionEngine {
         default:
             throw CompressionError.exportFailed(session.error?.localizedDescription ?? "未知错误")
         }
+    }
+
+    private func selectVideoPreset(
+        asset: AVAsset,
+        destinationURL: URL,
+        resolution: VideoResolution,
+        sourceBytes: Int64,
+        targetBytes: Int64
+    ) async throws -> VideoPresetEstimate {
+        var estimates: [VideoPresetEstimate] = []
+        for preset in videoPresetCandidates(for: resolution) {
+            try Task.checkCancellation()
+            guard let session = AVAssetExportSession(asset: asset, presetName: preset),
+                  session.supportedFileTypes.contains(.mp4) else {
+                continue
+            }
+            session.outputURL = destinationURL
+            session.outputFileType = .mp4
+            let bytes: Int64
+            do {
+                bytes = try await estimatedOutputLength(for: session)
+            } catch {
+                continue
+            }
+            if bytes > 0 {
+                estimates.append(.init(preset: preset, bytes: bytes))
+            }
+        }
+
+        if let bestWithinTarget = estimates
+            .filter({ $0.bytes <= targetBytes })
+            .max(by: { $0.bytes < $1.bytes }) {
+            return bestWithinTarget
+        }
+        if let bestReduction = estimates
+            .filter({ $0.bytes < sourceBytes })
+            .max(by: { $0.bytes < $1.bytes }) {
+            return bestReduction
+        }
+        throw CompressionError.videoAlreadyEfficient
+    }
+
+    private func videoPresetCandidates(for resolution: VideoResolution) -> [String] {
+        let presets: [String]
+        switch resolution {
+        case .source:
+            presets = [
+                AVAssetExportPresetHEVCHighestQuality,
+                AVAssetExportPresetHighestQuality
+            ]
+        case .fullHD:
+            presets = [
+                AVAssetExportPresetHEVC1920x1080,
+                AVAssetExportPreset1920x1080,
+                AVAssetExportPreset1280x720,
+                AVAssetExportPreset960x540,
+                AVAssetExportPresetMediumQuality,
+                AVAssetExportPresetLowQuality
+            ]
+        case .hd:
+            presets = [
+                AVAssetExportPreset1280x720,
+                AVAssetExportPreset960x540,
+                AVAssetExportPresetMediumQuality,
+                AVAssetExportPresetLowQuality
+            ]
+        case .compact:
+            presets = [
+                AVAssetExportPreset960x540,
+                AVAssetExportPreset640x480,
+                AVAssetExportPresetMediumQuality,
+                AVAssetExportPresetLowQuality
+            ]
+        }
+        var seen = Set<String>()
+        return presets.filter { seen.insert($0).inserted }
+    }
+
+    private func estimatedOutputLength(
+        for session: AVAssetExportSession
+    ) async throws -> Int64 {
+        try await withCheckedThrowingContinuation { continuation in
+            session.estimateOutputFileLength { length, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume(returning: length)
+                }
+            }
+        }
+    }
+
+    private func fileSize(of url: URL) throws -> Int64 {
+        let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+        return (attributes[.size] as? NSNumber)?.int64Value ?? 0
     }
 
     private func createArchive(

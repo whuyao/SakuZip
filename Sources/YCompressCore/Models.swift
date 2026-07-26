@@ -54,6 +54,20 @@ public enum CompressionQuality: String, Codable, CaseIterable, Sendable {
         case .compact: 0.52
         }
     }
+
+    /// Maximum estimated output size relative to the source video.
+    ///
+    /// AVFoundation's named video presets use fixed encoding targets that can
+    /// be much larger than an already-efficient source. YCompress uses these
+    /// ratios to select the best compatible preset that is still expected to
+    /// reduce the file.
+    public var videoTargetSizeRatio: Double {
+        switch self {
+        case .high: 0.95
+        case .balanced: 0.88
+        case .compact: 0.80
+        }
+    }
 }
 
 public enum ImageOutputFormat: String, Codable, CaseIterable, Sendable {
@@ -81,9 +95,9 @@ public enum VideoResolution: String, Codable, CaseIterable, Sendable {
     public var title: String {
         switch self {
         case .source: "保持原分辨率"
-        case .fullHD: "1080p"
-        case .hd: "720p"
-        case .compact: "540p"
+        case .fullHD: "最高 1080p"
+        case .hd: "最高 720p"
+        case .compact: "最高 540p"
         }
     }
 }

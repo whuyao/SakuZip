@@ -343,7 +343,12 @@ struct JobRow: View {
                     if let outputBytes = job.outputBytes {
                         Text("→")
                         Text(ByteCountFormatter.string(fromByteCount: outputBytes, countStyle: .file))
-                            .foregroundStyle(.green)
+                            .foregroundStyle(sizeChangeColor)
+                        if let sizeChangeText {
+                            Text("·")
+                            Text(sizeChangeText)
+                                .foregroundStyle(sizeChangeColor)
+                        }
                     }
                 }
                 .font(.caption)
@@ -379,6 +384,22 @@ struct JobRow: View {
             RoundedRectangle(cornerRadius: 14)
                 .fill(Color(nsColor: .controlBackgroundColor))
         )
+    }
+
+    private var sizeChangeText: String? {
+        guard let outputBytes = job.outputBytes, job.originalBytes > 0 else {
+            return nil
+        }
+        let change = (Double(outputBytes) / Double(job.originalBytes) - 1) * 100
+        if change <= 0 {
+            return String(format: "节省 %.1f%%", abs(change))
+        }
+        return String(format: "增大 %.1f%%", change)
+    }
+
+    private var sizeChangeColor: Color {
+        guard let outputBytes = job.outputBytes else { return .secondary }
+        return outputBytes < job.originalBytes ? .green : .red
     }
 
     @ViewBuilder

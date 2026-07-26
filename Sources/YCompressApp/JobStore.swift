@@ -57,7 +57,7 @@ final class JobStore: ObservableObject {
             .filter { seen.insert($0.standardizedFileURL).inserted }
             .map { url in
                 let values = try? url.resourceValues(forKeys: [.fileSizeKey, .totalFileAllocatedSizeKey])
-                let bytes = Int64(values?.totalFileAllocatedSize ?? values?.fileSize ?? 0)
+                let bytes = Int64(values?.fileSize ?? values?.totalFileAllocatedSize ?? 0)
                 return CompressionJob(
                     sourceURL: url,
                     kind: FileClassifier.kind(for: url),
@@ -136,7 +136,7 @@ final class JobStore: ObservableObject {
                     )
                     jobs[index].outputURL = output
                     jobs[index].outputBytes = Int64(
-                        values?.totalFileAllocatedSize ?? values?.fileSize ?? 0
+                        values?.fileSize ?? values?.totalFileAllocatedSize ?? 0
                     )
                     jobs[index].progress = 1
                     jobs[index].progressDetail = "已完成"
