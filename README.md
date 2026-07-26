@@ -11,6 +11,16 @@ YCompress 是面向 macOS 的原生、离线文件压缩与解压工具。它使
 App 图标由 OpenAI ImageGen 生成，项目保留 1254 px PNG 母版，并在构建时生成 macOS
 所需的多尺寸 ICNS。
 
+## 下载与文档
+
+- [下载最新版 Apple Silicon 安装包](https://github.com/whuyao/YCompress/releases/latest/download/YCompress-macOS-arm64.zip)
+- [安装说明](docs/INSTALL.md)
+- [使用手册](docs/USER_GUIDE.md)
+- [需求与仓库分析](REQUIREMENTS.md)
+
+本地项目目录还会在 `dist/` 中保留安装包副本与 SHA-256 校验值。安装包不直接提交进
+Git 历史，而是作为 GitHub Release 附件发布。
+
 ## 当前功能
 
 - 图片压缩：JPEG、PNG、HEIC、TIFF、BMP、GIF、WebP（具体解码能力由系统版本决定）

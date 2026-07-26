@@ -1,0 +1,75 @@
+# YCompress 安装说明
+
+## 系统要求
+
+- Apple Silicon Mac（M1、M2、M3、M4 或更新芯片）
+- macOS 13 Ventura 或更高版本
+- 安装包约 1.6 MB，实际运行不需要联网
+
+当前发布包仅包含 `arm64` 架构，不支持 Intel Mac。
+
+## 安装步骤
+
+1. 下载
+   [`YCompress-macOS-arm64.zip`](https://github.com/whuyao/YCompress/releases/latest/download/YCompress-macOS-arm64.zip)。
+2. 双击 ZIP 解压，得到 `YCompress.app`。
+3. 将 `YCompress.app` 拖到 Finder 的“应用程序”文件夹。
+4. 第一次启动时，按住 Control 点击或右键点击 `YCompress.app`，选择“打开”。
+5. 在 macOS 的确认窗口中再次选择“打开”。
+
+之后可以像普通 App 一样从 Launchpad、Spotlight 或“应用程序”文件夹启动。
+
+## 为什么首次启动需要右键打开
+
+当前版本使用本机 ad-hoc 签名，没有 Apple Developer ID 公证。macOS Gatekeeper
+可能会阻止直接双击启动。这不代表 App 已损坏；所有源码都可以在公开仓库中审查，
+App 也不会上传文件或发起网络请求。
+
+不要关闭整个系统的 Gatekeeper。优先使用上面的“右键 → 打开”方式。
+
+如果 macOS 仍提示 App 已损坏，并且安装包来自本仓库的 GitHub Release，可以执行：
+
+```bash
+xattr -cr /Applications/YCompress.app
+```
+
+该命令只移除 YCompress 的下载隔离属性，不会修改全局安全设置。
+
+## 校验安装包
+
+在终端进入安装包所在目录后运行：
+
+```bash
+shasum -a 256 YCompress-macOS-arm64.zip
+```
+
+版本 `0.1.0` 的预期 SHA-256：
+
+```text
+12f95bd45d6e33a555b88336f9811ff5f5803c01c53eb02e966cd56f757d1afb
+```
+
+如果结果不同，请重新从 GitHub Release 下载，不要继续安装来源不明的文件。
+
+## 卸载
+
+1. 退出 YCompress。
+2. 将 `/Applications/YCompress.app` 移到废纸篓。
+3. 如需同时清除自定义工作流设置，可在终端执行：
+
+```bash
+defaults delete com.yaoyao.ycompress
+```
+
+删除偏好设置不会删除已经压缩或解压的文件。
+
+## 从源码构建
+
+需要安装 Xcode。克隆仓库后运行：
+
+```bash
+chmod +x scripts/build-app.sh
+./scripts/build-app.sh
+```
+
+生成的 App 位于 `.build/YCompress.app`。
