@@ -9,11 +9,11 @@ xcuserdata/
 *.zip
 *.tar
 *.tgz
-!dist/YCompress-macOS-arm64.zip
+!dist/SakuZip-macOS-arm64.zip
 
 # 防止旧发布流程再次把交付物散落到项目根目录
-/YCompress.app/
-/YCompress-*-macOS-arm64.dmg
+/SakuZip.app/
+/SakuZip-*-macOS-arm64.dmg
 /SHA256SUMS
 /安装说明.md
 /使用手册.md

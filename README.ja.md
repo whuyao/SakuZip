@@ -1,8 +1,8 @@
-# YCompress
+# SakuZip
 
 [简体中文](README.md) | [English](README.en.md) | [日本語](README.ja.md)
 
-YCompressは、macOS向けのネイティブかつオフラインで動作する圧縮・解凍アプリです。
+SakuZipは、macOS向けのネイティブかつオフラインで動作する圧縮・解凍アプリです。
 UIにはSwiftUI、画像処理にはImageIO、動画処理にはAVFoundationを使用し、
 通常のアーカイブにはmacOS標準の`ditto`、`unzip`、`tar`を利用し、暗号化ZIPは
 同梱したminizip-ngを使ってApp内で処理します。
@@ -15,12 +15,12 @@ UIにはSwiftUI、画像処理にはImageIO、動画処理にはAVFoundationを�
 
 ## ダウンロードとドキュメント
 
-- [最新のApple Silicon版をダウンロード](https://github.com/whuyao/YCompress/releases/latest/download/YCompress-macOS-arm64.zip)
+- [最新のApple Silicon版をダウンロード](https://github.com/whuyao/SakuZip/releases/latest/download/SakuZip-macOS-arm64.zip)
 - [インストールガイド](docs/INSTALL.ja.md)
 - [ユーザーガイド](docs/USER_GUIDE.ja.md)
 - [中国語の要件・リポジトリ分析](REQUIREMENTS.md)
 
-`dist/`には、実行可能な`YCompress.app`、ZIPインストーラ、バージョン付きDMG、
+`dist/`には、実行可能な`SakuZip.app`、ZIPインストーラ、バージョン付きDMG、
 SHA-256チェックサムが含まれます。インストーラはGitHub Releaseにも添付されます。
 
 ## 主な機能
@@ -40,7 +40,7 @@ SHA-256チェックサムが含まれます。インストーラはGitHub Releas
   エントリ途中で一時停止でき、その他の処理は安全なチェックポイントで停止します。
   キャンセル時は未完成の出力を削除します。
 - 外部入力：Finderの「このアプリケーションで開く」、Appアイコンへのドロップ、
-  `open -a YCompress <ファイル>`に対応します。
+  `open -a SakuZip <ファイル>`に対応します。
 - ワークフロー：5つの内蔵ワークフローとカスタムワークフロー。画像、動画、ZIP、
   解凍、ファイル名、失敗時動作の詳細設定を提供します。
 - 出力管理：既定では元ファイルと同じフォルダを使用し、任意の出力先も選択できます。
@@ -61,20 +61,20 @@ chmod +x scripts/build-app.sh
 ./scripts/build-app.sh
 ```
 
-生成されたAppは`.build/YCompress.app`に配置されます。スクリプトはローカル実行向けの
+生成されたAppは`.build/SakuZip.app`に配置されます。スクリプトはローカル実行向けの
 ad-hoc署名を行います。一般配布にはApple Developer ID署名とnotarizationが必要です。
 
 開発実行：
 
 ```bash
-swift run YCompress
+swift run SakuZip
 ```
 
 コアチェック：
 
 ```bash
-swift run YCompressCoreChecks
-swift run YCompressArchiveChecks
+swift run SakuZipCoreChecks
+swift run SakuZipArchiveChecks
 ```
 
 リリースパッケージ：
@@ -94,7 +94,7 @@ App、ZIP、バージョン付きDMG、`SHA256SUMS`は`dist/`に生成されま�
 Tauri、React、Rustで構築され、FFmpeg、pngquant、jpegoptim、gifskiなどを同梱し、
 AGPL-3.0で公開されています。
 
-YCompressは独立したネイティブSwift実装で、CompressOのソースコードやバイナリを
+SakuZipは独立したネイティブSwift実装で、CompressOのソースコードやバイナリを
 コピー・リンクしていません。将来CompressOのコードを直接移植する場合は、
 AGPL-3.0への準拠が必要です。
 
@@ -114,4 +114,4 @@ AGPL-3.0への準拠が必要です。
 
 ## ライセンス
 
-YCompressは[MIT License](LICENSE)で公開されています。
+SakuZipは[MIT License](LICENSE)で公開されています。

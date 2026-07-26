@@ -1,4 +1,4 @@
-# YCompress 需求与仓库分析
+# SakuZip 需求与仓库分析
 
 ## CompressO 观察
 

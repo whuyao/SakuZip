@@ -1,8 +1,8 @@
-# YCompress
+# SakuZip
 
 [简体中文](README.md) | [English](README.en.md) | [日本語](README.ja.md)
 
-YCompress 是面向 macOS 的原生、离线文件压缩与解压工具。它使用 SwiftUI 构建界面，
+SakuZip 是面向 macOS 的原生、离线文件压缩与解压工具。它使用 SwiftUI 构建界面，
 使用 ImageIO 处理图片、AVFoundation 处理视频；普通归档调用 macOS 自带的
 `ditto`、`unzip` 和 `tar`，密码 ZIP 则由内嵌的 minizip-ng 在进程内完成。
 
@@ -17,14 +17,14 @@ App 图标由 OpenAI ImageGen 生成，项目保留 1254 px PNG 母版，并在�
 
 ## 下载与文档
 
-- [下载最新版 Apple Silicon 安装包](https://github.com/whuyao/YCompress/releases/latest/download/YCompress-macOS-arm64.zip)
+- [下载最新版 Apple Silicon 安装包](https://github.com/whuyao/SakuZip/releases/latest/download/SakuZip-macOS-arm64.zip)
 - [安装说明](docs/INSTALL.md)
 - [使用手册](docs/USER_GUIDE.md)
 - English: [Installation](docs/INSTALL.en.md) · [User Guide](docs/USER_GUIDE.en.md)
 - 日本語：[インストール](docs/INSTALL.ja.md) · [ユーザーガイド](docs/USER_GUIDE.ja.md)
 - [需求与仓库分析](REQUIREMENTS.md)
 
-`dist/` 同时包含可直接运行的 `YCompress.app`、ZIP 安装包和 SHA-256 校验值；
+`dist/` 同时包含可直接运行的 `SakuZip.app`、ZIP 安装包和 SHA-256 校验值；
 这些二进制文件也会作为 GitHub Release 附件发布。
 
 ## 当前功能
@@ -38,7 +38,7 @@ App 图标由 OpenAI ImageGen 生成，项目保留 1254 px PNG 母版，并在�
 - 批量队列：混合选择图片、视频、文件和目录
 - 任务控制：逐文件百分比与阶段提示；加密 ZIP 可在当前条目中暂停/继续，其他任务在
   安全检查点暂停；支持取消并清理未完成输出
-- 外部传入：支持 Finder“打开方式”、拖到 App 图标和 `open -a YCompress <文件>`
+- 外部传入：支持 Finder“打开方式”、拖到 App 图标和 `open -a SakuZip <文件>`
 - 工作流：5 个内置工作流和自定义工作流；“使用”会直接进入任务页
 - 高级参数：输出后缀、失败策略、图片格式/尺寸、视频分辨率、ZIP 元数据和解压目录
 - 输出管理：默认使用首个来源文件所在目录，也可手动更改并在完成后从 Finder 定位
@@ -58,20 +58,20 @@ chmod +x scripts/build-app.sh
 ./scripts/build-app.sh
 ```
 
-生成结果位于 `.build/YCompress.app`。构建脚本会执行 ad-hoc 签名，适合本机运行；
+生成结果位于 `.build/SakuZip.app`。构建脚本会执行 ad-hoc 签名，适合本机运行；
 对外分发仍需使用 Apple Developer 证书签名并完成 notarization。
 
 开发运行：
 
 ```bash
-swift run YCompress
+swift run SakuZip
 ```
 
 核心与加密归档检查：
 
 ```bash
-swift run YCompressCoreChecks
-swift run YCompressArchiveChecks
+swift run SakuZipCoreChecks
+swift run SakuZipArchiveChecks
 ```
 
 完整发布构建：
@@ -81,7 +81,7 @@ chmod +x scripts/package-release.sh
 ./scripts/package-release.sh
 ```
 
-该脚本会把可直接运行的 `YCompress.app`、ZIP、带版本号的 DMG 和 `SHA256SUMS`
+该脚本会把可直接运行的 `SakuZip.app`、ZIP、带版本号的 DMG 和 `SHA256SUMS`
 统一生成到 `dist/`。安装说明和使用手册保存在 `docs/`，同时会打包进 DMG。
 
 ## 设计来源与许可边界
@@ -92,7 +92,7 @@ chmod +x scripts/package-release.sh
 CompressO 使用 Tauri + React + Rust，并捆绑 FFmpeg、pngquant、jpegoptim、gifski 等工具，
 源代码采用 AGPL-3.0。
 
-YCompress 是独立的原生 Swift 实现，没有复制或链接 CompressO 的源代码或二进制。
+SakuZip 是独立的原生 Swift 实现，没有复制或链接 CompressO 的源代码或二进制。
 如果未来直接移植 CompressO 代码，发布时必须按 AGPL-3.0 提供相应源代码并保留许可声明。
 
 密码 ZIP 使用 [minizip-ng](https://github.com/zlib-ng/minizip-ng) 4.2.2，
@@ -109,4 +109,4 @@ YCompress 是独立的原生 Swift 实现，没有复制或链接 CompressO 的�
 
 ## License
 
-YCompress 采用 [MIT License](LICENSE)。
+SakuZip 采用 [MIT License](LICENSE)。

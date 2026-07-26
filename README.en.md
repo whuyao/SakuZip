@@ -1,8 +1,8 @@
-# YCompress
+# SakuZip
 
 [简体中文](README.md) | [English](README.en.md) | [日本語](README.ja.md)
 
-YCompress is a native, offline compression and extraction app for macOS. It uses
+SakuZip is a native, offline compression and extraction app for macOS. It uses
 SwiftUI for the interface, ImageIO for images, AVFoundation for video, and the
 built-in macOS tools `ditto`, `unzip`, and `tar` for regular archives. Encrypted
 ZIP operations run in-process using the bundled minizip-ng library.
@@ -15,12 +15,12 @@ Developed and maintained by the [UrbanComp](https://urbancomp.net) team.
 
 ## Download and documentation
 
-- [Download the latest Apple Silicon build](https://github.com/whuyao/YCompress/releases/latest/download/YCompress-macOS-arm64.zip)
+- [Download the latest Apple Silicon build](https://github.com/whuyao/SakuZip/releases/latest/download/SakuZip-macOS-arm64.zip)
 - [Installation guide](docs/INSTALL.en.md)
 - [User guide](docs/USER_GUIDE.en.md)
 - [Chinese requirements and repository analysis](REQUIREMENTS.md)
 
-The `dist/` directory contains the ready-to-run `YCompress.app`, ZIP installer,
+The `dist/` directory contains the ready-to-run `SakuZip.app`, ZIP installer,
 versioned DMG, and SHA-256 checksums. The installers are also attached to each
 GitHub Release.
 
@@ -29,7 +29,7 @@ GitHub Release.
 - Image compression: JPEG, PNG, HEIC, TIFF, BMP, GIF, and WebP, subject to the
   formats supported by the installed macOS version.
 - Video compression: MOV, MP4, M4V, and other AVFoundation-readable formats.
-  YCompress analyzes the source and selects a compatible preset expected to
+  SakuZip analyzes the source and selects a compatible preset expected to
   reduce its size.
 - File and folder archiving: create regular ZIP, AES-256 encrypted ZIP, or
   traditional compatibility-password ZIP files.
@@ -42,7 +42,7 @@ GitHub Release.
   pause within the current entry; other operations pause at a safe checkpoint.
   Cancellation removes incomplete output.
 - External input: Finder Open With, dropping files onto the App icon, and
-  `open -a YCompress <file>`.
+  `open -a SakuZip <file>`.
 - Workflows: five built-in workflows plus custom workflows, with advanced image,
   video, ZIP, extraction, naming, and failure-handling settings.
 - Output management: defaults to the source folder and supports selecting a
@@ -54,7 +54,7 @@ GitHub Release.
 - Localization: the App, installation guide, and user guide support Simplified
   Chinese, English, and Japanese. The first launch follows macOS, and a language
   selected in Settings is remembered for future launches.
-- Privacy: all processing is local. YCompress does not upload files or make
+- Privacy: all processing is local. SakuZip does not upload files or make
   network requests.
 
 ## Build
@@ -66,21 +66,21 @@ chmod +x scripts/build-app.sh
 ./scripts/build-app.sh
 ```
 
-The generated App is placed at `.build/YCompress.app`. The script uses an ad-hoc
+The generated App is placed at `.build/SakuZip.app`. The script uses an ad-hoc
 signature for local use. Public distribution should use an Apple Developer ID
 certificate and notarization.
 
 Development:
 
 ```bash
-swift run YCompress
+swift run SakuZip
 ```
 
 Core checks:
 
 ```bash
-swift run YCompressCoreChecks
-swift run YCompressArchiveChecks
+swift run SakuZipCoreChecks
+swift run SakuZipArchiveChecks
 ```
 
 Release packaging:
@@ -101,7 +101,7 @@ queue, quality presets, offline processing, and result comparison concepts.
 CompressO is built with Tauri, React, and Rust, bundles tools such as FFmpeg,
 pngquant, jpegoptim, and gifski, and is licensed under AGPL-3.0.
 
-YCompress is an independent native Swift implementation. It does not copy or
+SakuZip is an independent native Swift implementation. It does not copy or
 link CompressO source code or binaries. Any future direct port of CompressO code
 must comply with AGPL-3.0.
 
@@ -121,4 +121,4 @@ license. See [Third-Party Notices](THIRD_PARTY_NOTICES.md).
 
 ## License
 
-YCompress is released under the [MIT License](LICENSE).
+SakuZip is released under the [MIT License](LICENSE).
