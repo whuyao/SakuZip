@@ -15,10 +15,10 @@ the sidebar, Settings, and Help menu.
 
 ## Interface language
 
-YCompress supports Simplified Chinese, English, and Japanese and follows the
-macOS preferred language by default. To choose a language only for YCompress,
-open **System Settings → General → Language & Region → Applications**, add
-YCompress, choose the language, and restart the App.
+YCompress supports Simplified Chinese, English, and Japanese. The first launch
+follows the macOS preferred language. You can then choose Follow System or a
+specific language in **YCompress Settings → Language**. The choice is stored
+locally and applies after restarting the App, including future launches.
 
 ## Add files
 

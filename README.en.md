@@ -48,7 +48,8 @@ GitHub Release.
 - Cloud files: refreshes source size after hydration instead of retaining a
   stale zero-byte placeholder.
 - Localization: the App, installation guide, and user guide support Simplified
-  Chinese, English, and Japanese, following the macOS language preference.
+  Chinese, English, and Japanese. The first launch follows macOS, and a language
+  selected in Settings is remembered for future launches.
 - Privacy: all processing is local. YCompress does not upload files or make
   network requests.
 

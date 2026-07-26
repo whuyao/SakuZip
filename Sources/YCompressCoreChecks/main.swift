@@ -61,6 +61,14 @@ check(
     CompressionQuality.high.videoTargetSizeRatio < 1,
     "every video quality must target an output smaller than the source"
 )
+check(
+    AppLanguage.allCases.map(\.rawValue) == ["system", "zh-Hans", "en", "ja"],
+    "language choices should remain stable for persisted settings"
+)
+check(
+    AppLanguage(rawValue: "system") == .system,
+    "the default persisted language should resolve to system"
+)
 
 let legacyPresetJSON = """
 {
