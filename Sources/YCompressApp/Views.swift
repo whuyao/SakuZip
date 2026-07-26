@@ -76,6 +76,14 @@ struct RootView: View {
                     Text("文件不会离开这台 Mac")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
+                    Divider()
+                        .padding(.vertical, 2)
+                    Link(destination: URL(string: "https://urbancomp.net")!) {
+                        Label("UrbanComp 团队网站", systemImage: "globe")
+                            .font(.caption.weight(.medium))
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(16)
@@ -560,6 +568,18 @@ struct SettingsView: View {
             Section("隐私") {
                 Label("所有处理均在本机完成，不上传文件。", systemImage: "lock.shield.fill")
                     .foregroundStyle(.secondary)
+            }
+            Section("关于") {
+                LabeledContent("版本", value: "0.1.1")
+                LabeledContent("开发团队") {
+                    Link("UrbanComp", destination: URL(string: "https://urbancomp.net")!)
+                }
+                LabeledContent("团队网站") {
+                    Link(
+                        "urbancomp.net",
+                        destination: URL(string: "https://urbancomp.net")!
+                    )
+                }
             }
             Section("格式") {
                 Text("图片：JPEG / PNG / HEIC 等；视频：macOS 可解码格式；归档：ZIP / TAR / TGZ")

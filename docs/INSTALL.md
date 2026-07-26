@@ -43,10 +43,10 @@ xattr -cr /Applications/YCompress.app
 shasum -a 256 YCompress-macOS-arm64.zip
 ```
 
-版本 `0.1.0` 的预期 SHA-256：
+版本 `0.1.1` 的预期 SHA-256：
 
 ```text
-12f95bd45d6e33a555b88336f9811ff5f5803c01c53eb02e966cd56f757d1afb
+6fba24b82a03d9f782b83fa964fb583740c5aa7ff6bfd65ea9c823c595a5cc6d
 ```
 
 如果结果不同，请重新从 GitHub Release 下载，不要继续安装来源不明的文件。
@@ -73,3 +73,8 @@ chmod +x scripts/build-app.sh
 ```
 
 生成的 App 位于 `.build/YCompress.app`。
+
+## 开发团队
+
+YCompress 由 [UrbanComp](https://urbancomp.net) 团队开发与维护。App 侧栏、设置页及
+“帮助”菜单均提供团队网站入口。
