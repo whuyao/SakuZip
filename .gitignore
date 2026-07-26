@@ -11,7 +11,7 @@ xcuserdata/
 *.tgz
 !dist/YCompress-macOS-arm64.zip
 
-# 每次发布时生成在项目根目录的本地交付物
+# 防止旧发布流程再次把交付物散落到项目根目录
 /YCompress.app/
 /YCompress-*-macOS-arm64.dmg
 /SHA256SUMS

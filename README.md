@@ -67,9 +67,8 @@ chmod +x scripts/package-release.sh
 ./scripts/package-release.sh
 ```
 
-该脚本会在项目根目录生成可直接运行的 `YCompress.app`、ZIP、带版本号的 DMG、
-`SHA256SUMS`、`安装说明.md` 和 `使用手册.md`，并同步更新 `dist/`。以后发布版本时以
-项目根目录的这些文件为本地交付物。
+该脚本会把可直接运行的 `YCompress.app`、ZIP、带版本号的 DMG 和 `SHA256SUMS`
+统一生成到 `dist/`。安装说明和使用手册保存在 `docs/`，同时会打包进 DMG。
 
 ## 设计来源与许可边界
 
