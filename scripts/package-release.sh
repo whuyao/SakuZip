@@ -1,5 +1,6 @@
 #!/bin/zsh
 set -euo pipefail
+setopt NULL_GLOB
 
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD_APP="$PROJECT_DIR/.build/YCompress.app"
@@ -81,6 +82,9 @@ rm -f "$DIST_ZIP" "$DIST_DMG"
 
 # ditto 会保留源 Bundle 的目录时间；刷新顶层时间，避免 Finder 把新 App 显示成旧版本。
 /usr/bin/touch "$DIST_APP"
+remove_file_provider_attributes "$DIST_APP"
+codesign --force --deep --sign - "$DIST_APP"
+codesign --verify --deep --strict --verbose=2 "$DIST_APP"
 
 echo "发布文件已生成："
 echo "$DIST_APP"
