@@ -11,6 +11,13 @@ xcuserdata/
 *.tgz
 !dist/YCompress-macOS-arm64.zip
 
+# 每次发布时生成在项目根目录的本地交付物
+/YCompress.app/
+/YCompress-*-macOS-arm64.dmg
+/SHA256SUMS
+/安装说明.md
+/使用手册.md
+
 # Python helper caches
 __pycache__/
 *.pyc

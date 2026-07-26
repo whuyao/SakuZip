@@ -59,6 +59,17 @@ swift run YCompress
 swift run YCompressCoreChecks
 ```
 
+完整发布构建：
+
+```bash
+chmod +x scripts/package-release.sh
+./scripts/package-release.sh
+```
+
+该脚本会在项目根目录生成可直接运行的 `YCompress.app`、ZIP、带版本号的 DMG、
+`SHA256SUMS`、`安装说明.md` 和 `使用手册.md`，并同步更新 `dist/`。以后发布版本时以
+项目根目录的这些文件为本地交付物。
+
 ## 设计来源与许可边界
 
 产品范围参考了开源项目

@@ -19,6 +19,9 @@
 
 之后可以像普通 App 一样从 Launchpad、Spotlight 或“应用程序”文件夹启动。
 
+也可以从同一个 Release 下载 `YCompress-0.1.2-macOS-arm64.dmg`：打开 DMG 后，
+将 `YCompress.app` 拖到其中的“Applications”快捷方式即可。
+
 ## 为什么首次启动需要右键打开
 
 当前版本使用本机 ad-hoc 签名，没有 Apple Developer ID 公证。macOS Gatekeeper
@@ -41,13 +44,13 @@ xattr -cr /Applications/YCompress.app
 
 ```bash
 shasum -a 256 YCompress-macOS-arm64.zip
+# 或同时校验同一批次的 ZIP 与 DMG
+shasum -a 256 -c SHA256SUMS
 ```
 
-版本 `0.1.2` 的预期 SHA-256：
-
-```text
-7b813a6c2de9908905376210685b102d4b32b101ec4a0597344293dd5ca1281f
-```
+版本 `0.1.2` 的预期值记录在同一 Release 附带的 `SHA256SUMS` 中；项目根目录和
+`dist/` 也各保存一份。DMG 与 ZIP 每次重新打包后的字节可能不同，应以同一批次生成的
+`SHA256SUMS` 为准。
 
 如果结果不同，请重新从 GitHub Release 下载，不要继续安装来源不明的文件。
 
